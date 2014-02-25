@@ -1,0 +1,8 @@
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\obj\Debug\Recognizer.HMM.AboutForm.resources
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\obj\Debug\Recognizer.HMM.MainForm.resources
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\obj\Debug\Recognizer.HMM.ViewForm.resources
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\obj\Debug\HMMBasedGestureRecognition.csproj.GenerateResource.Cache
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Debug\Recognizer.HMM.exe
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Debug\Recognizer.HMM.pdb
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\obj\Debug\Recognizer.HMM.exe
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\obj\Debug\Recognizer.HMM.pdb

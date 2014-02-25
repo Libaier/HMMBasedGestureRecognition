@@ -4,12 +4,13 @@ using System.Collections;
 using System.ComponentModel;
 using System.Windows.Forms;
 using System.Data;
+using System.Collections.Generic;
 
 namespace Recognizer.HMM
 {
-	public class MainForm : System.Windows.Forms.Form
-	{
-		#region Fields
+    public class MainForm : System.Windows.Forms.Form
+    {
+        #region Fields
 
         private RecognizerUtils _rec;
         private bool _recording;
@@ -17,26 +18,28 @@ namespace Recognizer.HMM
         private ArrayList _points;
         private ViewForm _viewFrm;
 
-		#endregion
+        private List<String> _directionalCodewordsList;
+        private String _directionalCodewords;
 
-		#region Form Elements
+        #endregion
 
-		private System.Windows.Forms.Label lblRecord;
-		private System.Windows.Forms.MainMenu MainMenu;
+        #region Form Elements
+
+        private System.Windows.Forms.Label lblRecord;
+        private System.Windows.Forms.MainMenu MainMenu;
         private System.Windows.Forms.MenuItem Exit;
-		private System.Windows.Forms.MenuItem LoadGesture;
-		private System.Windows.Forms.MenuItem ViewGesture;
-		private System.Windows.Forms.MenuItem RecordGesture;
-		private System.Windows.Forms.MenuItem GestureMenu;
+        private System.Windows.Forms.MenuItem LoadGesture;
+        private System.Windows.Forms.MenuItem ViewGesture;
+        private System.Windows.Forms.MenuItem RecordGesture;
+        private System.Windows.Forms.MenuItem GestureMenu;
         private System.Windows.Forms.MenuItem ClearGestures;
-		private System.Windows.Forms.Label lblResult;
-		private System.Windows.Forms.MenuItem HelpMenu;
+        private System.Windows.Forms.Label lblResult;
+        private System.Windows.Forms.MenuItem HelpMenu;
         private System.Windows.Forms.MenuItem About;
-        private Label lblRecognizing;
         private MenuItem FileMenu;
         private IContainer components;
 
-		#endregion
+        #endregion
 
         #region Start & Stop
 
@@ -52,6 +55,7 @@ namespace Recognizer.HMM
             InitializeComponent();
             _rec = new RecognizerUtils();
             _points = new ArrayList(256);
+            _directionalCodewordsList = new List<string>(256);
             _viewFrm = null;
         }
 
@@ -69,13 +73,13 @@ namespace Recognizer.HMM
 
         #endregion
 
-		#region Windows Form Designer generated code
-		/// <summary>
-		/// Required method for Designer support - do not modify
-		/// the contents of this method with the code editor.
-		/// </summary>
-		private void InitializeComponent()
-		{
+        #region Windows Form Designer generated code
+        /// <summary>
+        /// Required method for Designer support - do not modify
+        /// the contents of this method with the code editor.
+        /// </summary>
+        private void InitializeComponent()
+        {
             this.components = new System.ComponentModel.Container();
             this.lblRecord = new System.Windows.Forms.Label();
             this.MainMenu = new System.Windows.Forms.MainMenu(this.components);
@@ -89,7 +93,6 @@ namespace Recognizer.HMM
             this.HelpMenu = new System.Windows.Forms.MenuItem();
             this.About = new System.Windows.Forms.MenuItem();
             this.lblResult = new System.Windows.Forms.Label();
-            this.lblRecognizing = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // lblRecord
@@ -188,24 +191,11 @@ namespace Recognizer.HMM
             this.lblResult.Text = "Test";
             this.lblResult.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             // 
-            // lblRecognizing
-            // 
-            this.lblRecognizing.Dock = System.Windows.Forms.DockStyle.Top;
-            this.lblRecognizing.ForeColor = System.Drawing.Color.Firebrick;
-            this.lblRecognizing.Location = new System.Drawing.Point(0, 26);
-            this.lblRecognizing.Name = "lblRecognizing";
-            this.lblRecognizing.Size = new System.Drawing.Size(1155, 25);
-            this.lblRecognizing.TabIndex = 3;
-            this.lblRecognizing.Text = "Recognizing...";
-            this.lblRecognizing.TextAlign = System.Drawing.ContentAlignment.TopRight;
-            this.lblRecognizing.Visible = false;
-            // 
             // MainForm
             // 
             this.AutoScaleBaseSize = new System.Drawing.Size(6, 14);
             this.BackColor = System.Drawing.SystemColors.Window;
             this.ClientSize = new System.Drawing.Size(1184, 640);
-            this.Controls.Add(this.lblRecognizing);
             this.Controls.Add(this.lblResult);
             this.Controls.Add(this.lblRecord);
             this.Menu = this.MainMenu;
@@ -221,8 +211,8 @@ namespace Recognizer.HMM
             this.ResumeLayout(false);
             this.PerformLayout();
 
-		}
-		#endregion
+        }
+        #endregion
 
         #region File Menu
 
@@ -237,7 +227,7 @@ namespace Recognizer.HMM
 
         private void GestureMenu_Popup(object sender, System.EventArgs e)
         {
-            RecordGesture.Checked = _recording;
+            
             ViewGesture.Checked = (_viewFrm != null && !_viewFrm.IsDisposed);
             ClearGestures.Enabled = (_rec.NumGestures > 0);
         }
@@ -293,6 +283,15 @@ namespace Recognizer.HMM
             _points.Clear();
             Invalidate();
             _recording = !_recording; // recording will happen on mouse-up
+            if (_recording)
+            {
+                RecordGesture.Text = "Stop Recording";
+            }
+            else
+            {
+
+                RecordGesture.Text = "Record";
+            }
             lblRecord.Visible = _recording;
         }
 
@@ -324,12 +323,12 @@ namespace Recognizer.HMM
         {
             if (_points.Count > 0)
             {
-                PointF p0 = (PointF) (PointR) _points[0]; // draw the first point bigger
+                PointF p0 = (PointF)(PointR)_points[0]; // draw the first point bigger
                 e.Graphics.FillEllipse(_recording ? Brushes.Firebrick : Brushes.DarkBlue, p0.X - 5f, p0.Y - 5f, 10f, 10f);
             }
             foreach (PointR r in _points)
             {
-                PointF p = (PointF) r; // cast
+                PointF p = (PointF)r; // cast
                 e.Graphics.FillEllipse(_recording ? Brushes.Firebrick : Brushes.DarkBlue, p.X - 2f, p.Y - 2f, 4f, 4f);
             }
         }
@@ -345,16 +344,34 @@ namespace Recognizer.HMM
 
         private void MainForm_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
-            _isDown = true;
-            _points.Clear();
-            _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
-            Invalidate();
+            if (e.Button == MouseButtons.Right)
+            {
+                if (_directionalCodewordsList.Count >= 1)
+                {
+                    _directionalCodewordsList.RemoveAt(_directionalCodewordsList.Count - 1);
+                    _points.Clear();
+                    lblResult.Text = _directionalCodewordsList.Count + "";
+                    Invalidate();
+                }
+            }
+            else
+            {
+                _isDown = true;
+                _points.Clear();
+                _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
+                Invalidate();
+            }
         }
 
         private void MainForm_MouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
         {
             if (_isDown)
             {
+                if (_points.Count >= 2)
+                {
+                    PointR p = (PointR)_points[_points.Count - 1];
+                    _directionalCodewords = _directionalCodewords + " " + getDirectionalCodewords(e.X, e.Y, p.X, p.Y);
+                }
                 _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
                 Invalidate(new Rectangle(e.X - 2, e.Y - 2, 4, 4));
             }
@@ -370,26 +387,29 @@ namespace Recognizer.HMM
                 {
                     if (_recording)
                     {
-                        SaveFileDialog dlg = new SaveFileDialog();
-                        dlg.Filter = "Gestures (*.xml)|*.xml";
-                        dlg.Title = "Save Gesture As";
-                        dlg.AddExtension = true;
-                        dlg.RestoreDirectory = false;
+                        //SaveFileDialog dlg = new SaveFileDialog();
+                        //dlg.Filter = "Gestures (*.xml)|*.xml";
+                        //dlg.Title = "Save Gesture As";
+                        //dlg.AddExtension = true;
+                        //dlg.RestoreDirectory = false;
 
-                        if (dlg.ShowDialog(this) == DialogResult.OK)
-                        {
-                            _rec.SaveGesture(dlg.FileName, _points);  // resample, scale, translate to origin
-                            ReloadViewForm();
-                        }
+                        //if (dlg.ShowDialog(this) == DialogResult.OK)
+                        //{
+                        //    _rec.SaveGesture(dlg.FileName, _points);  // resample, scale, translate to origin
+                        //    ReloadViewForm();
+                        //}
 
-                        dlg.Dispose();
-                        _recording = false;
-                        lblRecord.Visible = false;
+                        //dlg.Dispose();
+                        _directionalCodewords = _directionalCodewords.Substring(1, _directionalCodewords.Length - 1);
+                        _directionalCodewordsList.Add(_directionalCodewords);
+                        _directionalCodewords = null;
+                        //_recording = false;
+                        //lblRecord.Visible = false;
                         Invalidate();
                     }
                     else if (_rec.NumGestures > 0) // not recording, so testing
                     {
-                        lblRecognizing.Visible = true;
+
                         Application.DoEvents(); // forces label to display
 
                         //NBestList result = _rec.Recognize(_points); // where all the action is!!
@@ -399,12 +419,18 @@ namespace Recognizer.HMM
                         //    Math.Round(result.Distance, 2),
                         //    Math.Round(result.Angle, 2), (char) 176);
 
-                        lblRecognizing.Visible = false;
                     }
                 }
             }
         }
 
+        private int getDirectionalCodewords(double x, double y, double lastX, double lastY)
+        {
+            double angle = Math.Atan2(y - lastY, x - lastX); // keep it in radians
+            if (angle < 0)
+                angle += 2 * 3.1425926;
+            return (int)(angle * (8 / 3.1425926)); // convert to <0, 16)
+        }
         #endregion
-	}
+    }
 }

@@ -5,13 +5,37 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
+		Debug|Mixed Platforms = Debug|Mixed Platforms
+		Debug|Win32 = Debug|Win32
+		Debug|x86 = Debug|x86
+		Release 3.5|Any CPU = Release 3.5|Any CPU
+		Release 3.5|Mixed Platforms = Release 3.5|Mixed Platforms
+		Release 3.5|Win32 = Release 3.5|Win32
+		Release 3.5|x86 = Release 3.5|x86
 		Release|Any CPU = Release|Any CPU
+		Release|Mixed Platforms = Release|Mixed Platforms
+		Release|Win32 = Release|Win32
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{F04D5438-2904-45FF-960B-10E1989CF573}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F04D5438-2904-45FF-960B-10E1989CF573}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Debug|Win32.ActiveCfg = Debug|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Release 3.5|Any CPU.ActiveCfg = Release|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Release 3.5|Any CPU.Build.0 = Release|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Release 3.5|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Release 3.5|Mixed Platforms.Build.0 = Release|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Release 3.5|Win32.ActiveCfg = Release|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Release 3.5|x86.ActiveCfg = Release|Any CPU
 		{F04D5438-2904-45FF-960B-10E1989CF573}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F04D5438-2904-45FF-960B-10E1989CF573}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Release|Win32.ActiveCfg = Release|Any CPU
+		{F04D5438-2904-45FF-960B-10E1989CF573}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

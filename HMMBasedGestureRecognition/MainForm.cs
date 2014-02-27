@@ -5,6 +5,13 @@ using System.ComponentModel;
 using System.Windows.Forms;
 using System.Data;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.InteropServices;
+using Accord.Statistics.Models.Markov.Topology;
+using Accord.Statistics.Models.Markov;
+using Accord.Statistics.Models.Markov.Learning;
+
+
 
 namespace Recognizer.HMM
 {
@@ -16,10 +23,13 @@ namespace Recognizer.HMM
         private bool _recording;
         private bool _isDown;
         private ArrayList _points;
+        private List<ArrayList> _pointsList;
         private ViewForm _viewFrm;
 
         private List<String> _directionalCodewordsList;
+        
         private String _directionalCodewords;
+
 
         #endregion
 
@@ -33,10 +43,13 @@ namespace Recognizer.HMM
         private System.Windows.Forms.MenuItem RecordGesture;
         private System.Windows.Forms.MenuItem GestureMenu;
         private System.Windows.Forms.MenuItem ClearGestures;
-        private System.Windows.Forms.Label lblResult;
         private System.Windows.Forms.MenuItem HelpMenu;
         private System.Windows.Forms.MenuItem About;
         private MenuItem FileMenu;
+        private MenuItem HMMMenu;
+        private MenuItem LoadAndTrain;
+        private MenuItem LoadFromHMMFile;
+        private Label lblResult;
         private IContainer components;
 
         #endregion
@@ -54,8 +67,9 @@ namespace Recognizer.HMM
             SetStyle(ControlStyles.DoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
             InitializeComponent();
             _rec = new RecognizerUtils();
-            _points = new ArrayList(256);
-            _directionalCodewordsList = new List<string>(256);
+            _points = new ArrayList();
+            _directionalCodewordsList = new List<string>();
+            _pointsList = new List<ArrayList>();
             _viewFrm = null;
         }
 
@@ -90,6 +104,9 @@ namespace Recognizer.HMM
             this.LoadGesture = new System.Windows.Forms.MenuItem();
             this.ViewGesture = new System.Windows.Forms.MenuItem();
             this.ClearGestures = new System.Windows.Forms.MenuItem();
+            this.HMMMenu = new System.Windows.Forms.MenuItem();
+            this.LoadAndTrain = new System.Windows.Forms.MenuItem();
+            this.LoadFromHMMFile = new System.Windows.Forms.MenuItem();
             this.HelpMenu = new System.Windows.Forms.MenuItem();
             this.About = new System.Windows.Forms.MenuItem();
             this.lblResult = new System.Windows.Forms.Label();
@@ -114,6 +131,7 @@ namespace Recognizer.HMM
             this.MainMenu.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
             this.FileMenu,
             this.GestureMenu,
+            this.HMMMenu,
             this.HelpMenu});
             // 
             // FileMenu
@@ -167,9 +185,28 @@ namespace Recognizer.HMM
             this.ClearGestures.Text = "&Clear";
             this.ClearGestures.Click += new System.EventHandler(this.ClearGestures_Click);
             // 
+            // HMMMenu
+            // 
+            this.HMMMenu.Index = 2;
+            this.HMMMenu.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
+            this.LoadAndTrain,
+            this.LoadFromHMMFile});
+            this.HMMMenu.Text = "&HMM";
+            // 
+            // LoadAndTrain
+            // 
+            this.LoadAndTrain.Index = 0;
+            this.LoadAndTrain.Text = "&Load And Train...";
+            this.LoadAndTrain.Click += new System.EventHandler(this.LoadAndTrain_Click);
+            // 
+            // LoadFromHMMFile
+            // 
+            this.LoadFromHMMFile.Index = 1;
+            this.LoadFromHMMFile.Text = "Load From &HMM File...";
+            // 
             // HelpMenu
             // 
-            this.HelpMenu.Index = 2;
+            this.HelpMenu.Index = 3;
             this.HelpMenu.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
             this.About});
             this.HelpMenu.Text = "&Help";
@@ -182,14 +219,15 @@ namespace Recognizer.HMM
             // 
             // lblResult
             // 
-            this.lblResult.AutoSize = true;
-            this.lblResult.Dock = System.Windows.Forms.DockStyle.Right;
-            this.lblResult.Location = new System.Drawing.Point(1155, 26);
+            this.lblResult.BackColor = System.Drawing.Color.Transparent;
+            this.lblResult.Dock = System.Windows.Forms.DockStyle.Top;
+            this.lblResult.Font = new System.Drawing.Font("Courier New", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblResult.ForeColor = System.Drawing.Color.Firebrick;
+            this.lblResult.Location = new System.Drawing.Point(0, 26);
             this.lblResult.Name = "lblResult";
-            this.lblResult.Size = new System.Drawing.Size(29, 12);
+            this.lblResult.Size = new System.Drawing.Size(1184, 26);
             this.lblResult.TabIndex = 2;
-            this.lblResult.Text = "Test";
-            this.lblResult.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.lblResult.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // MainForm
             // 
@@ -209,7 +247,6 @@ namespace Recognizer.HMM
             this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseMove);
             this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseUp);
             this.ResumeLayout(false);
-            this.PerformLayout();
 
         }
         #endregion
@@ -227,7 +264,7 @@ namespace Recognizer.HMM
 
         private void GestureMenu_Popup(object sender, System.EventArgs e)
         {
-            
+
             ViewGesture.Checked = (_viewFrm != null && !_viewFrm.IsDisposed);
             ClearGestures.Enabled = (_rec.NumGestures > 0);
         }
@@ -278,6 +315,8 @@ namespace Recognizer.HMM
             }
         }
 
+
+
         private void RecordGesture_Click(object sender, System.EventArgs e)
         {
             _points.Clear();
@@ -286,11 +325,42 @@ namespace Recognizer.HMM
             if (_recording)
             {
                 RecordGesture.Text = "Stop Recording";
+
             }
             else
             {
+                if (_directionalCodewordsList.Count > 0)
+                {
 
-                RecordGesture.Text = "Record";
+                    SaveFileDialog dlg = new SaveFileDialog();
+                    dlg.Filter = "Gestures (*.xml)|*.xml";
+                    dlg.Title = "Save Gesture As";
+                    dlg.AddExtension = true;
+                    dlg.RestoreDirectory = false;
+
+                    if (dlg.ShowDialog(this) == DialogResult.OK)
+                    {
+                        _rec.SaveDirectionalCodewords(dlg.FileName, _directionalCodewordsList);
+                        String filename = Gesture.ParseName(dlg.FileName);
+                        for (int i = 0; i < _pointsList.Count; i++)
+                        {
+                            _rec.SaveGesture(filename + i + ".xml", _pointsList[i]);
+                        }
+                        ReloadViewForm();
+                    }
+
+                    dlg.Dispose();
+
+
+                    _directionalCodewordsList.Clear();
+                    _pointsList.Clear();
+                    _points.Clear();
+                    lblResult.Text = "0";
+                    Invalidate();
+
+                    RecordGesture.Text = "Record";
+                }
+
             }
             lblRecord.Visible = _recording;
         }
@@ -349,7 +419,16 @@ namespace Recognizer.HMM
                 if (_directionalCodewordsList.Count >= 1)
                 {
                     _directionalCodewordsList.RemoveAt(_directionalCodewordsList.Count - 1);
-                    _points.Clear();
+                    _pointsList.RemoveAt(_pointsList.Count-1);
+                    if (_pointsList.Count - 1 >= 0)
+                    {
+                        _points = _pointsList[_pointsList.Count - 1];
+                    }
+                    else
+                    {
+                        _points.Clear();
+                    }
+                    
                     lblResult.Text = _directionalCodewordsList.Count + "";
                     Invalidate();
                 }
@@ -358,6 +437,7 @@ namespace Recognizer.HMM
             {
                 _isDown = true;
                 _points.Clear();
+                _directionalCodewords = null;
                 _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
                 Invalidate();
             }
@@ -370,7 +450,7 @@ namespace Recognizer.HMM
                 if (_points.Count >= 2)
                 {
                     PointR p = (PointR)_points[_points.Count - 1];
-                    _directionalCodewords = _directionalCodewords + " " + getDirectionalCodewords(e.X, e.Y, p.X, p.Y);
+                    _directionalCodewords = _directionalCodewords + "-" + getDirectionalCodewords(e.X, e.Y, p.X, p.Y);
                 }
                 _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
                 Invalidate(new Rectangle(e.X - 2, e.Y - 2, 4, 4));
@@ -387,37 +467,20 @@ namespace Recognizer.HMM
                 {
                     if (_recording)
                     {
-                        //SaveFileDialog dlg = new SaveFileDialog();
-                        //dlg.Filter = "Gestures (*.xml)|*.xml";
-                        //dlg.Title = "Save Gesture As";
-                        //dlg.AddExtension = true;
-                        //dlg.RestoreDirectory = false;
-
-                        //if (dlg.ShowDialog(this) == DialogResult.OK)
-                        //{
-                        //    _rec.SaveGesture(dlg.FileName, _points);  // resample, scale, translate to origin
-                        //    ReloadViewForm();
-                        //}
-
-                        //dlg.Dispose();
                         _directionalCodewords = _directionalCodewords.Substring(1, _directionalCodewords.Length - 1);
                         _directionalCodewordsList.Add(_directionalCodewords);
-                        _directionalCodewords = null;
-                        //_recording = false;
-                        //lblRecord.Visible = false;
+
+                        _pointsList.Add(new ArrayList(_points));
+
+
+                        lblResult.Text = _directionalCodewordsList.Count + "";
+                       
                         Invalidate();
                     }
                     else if (_rec.NumGestures > 0) // not recording, so testing
                     {
 
                         Application.DoEvents(); // forces label to display
-
-                        //NBestList result = _rec.Recognize(_points); // where all the action is!!
-                        //lblResult.Text = String.Format("{0}: {1} ({2}px, {3}{4})",
-                        //    result.Name,
-                        //    Math.Round(result.Score, 2),
-                        //    Math.Round(result.Distance, 2),
-                        //    Math.Round(result.Angle, 2), (char) 176);
 
                     }
                 }
@@ -432,5 +495,48 @@ namespace Recognizer.HMM
             return (int)(angle * (8 / 3.1425926)); // convert to <0, 16)
         }
         #endregion
+
+
+
+        private void LoadAndTrain_Click(object sender, EventArgs e)
+        {
+
+            List<int> outputLabels = new List<int>(256);
+            List<int[]> inputSequences = new List<int[]>(256);
+
+            OpenFileDialog dlg = new OpenFileDialog();
+            dlg.Filter = "Gestures (*.xml)|*.xml";
+            dlg.Title = "Load Gestures";
+            dlg.RestoreDirectory = false;
+            dlg.Multiselect = true;
+
+            if (dlg.ShowDialog(this) == DialogResult.OK)
+            {
+                for (int i = 0; i < dlg.FileNames.Length; i++)
+                {
+                    string name = dlg.FileNames[i];
+                    inputSequences = _rec.LoadDirectionalCodewordsFile(name);
+                    for (int j = 0; j < inputSequences.Count; j++)
+                    {
+                        outputLabels.Add(i);
+                    }
+                }
+                ReloadViewForm();
+            }
+            ITopology forward = new Forward(5, 3);
+            HiddenMarkovClassifier hmmc = new HiddenMarkovClassifier(3, forward, 16);
+            // And create a algorithms to teach each of the inner models
+            var teacher = new HiddenMarkovClassifierLearning(hmmc,
+
+                // We can specify individual training options for each inner model:
+                modelIndex => new BaumWelchLearning(hmmc.Models[modelIndex])
+                {
+                    Tolerance = 0.001, // iterate until log-likelihood changes less than 0.001
+                    Iterations = 0     // don't place an upper limit on the number of iterations
+                });
+            teacher.Run((int[][])inputSequences.ToArray(), (int[])outputLabels.ToArray());
+            int i1 = hmmc.Compute(new[]{0,0});
+            int i2 = hmmc.Compute(new[] { 0, 0 });
+        }
     }
 }

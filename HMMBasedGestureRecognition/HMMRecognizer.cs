@@ -6,6 +6,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
+using System.Collections.Generic;
 
 namespace Recognizer.HMM
 {
@@ -175,8 +176,8 @@ namespace Recognizer.HMM
             string name = Gesture.ParseName(filename);
             if (_gestures.ContainsKey(name))
                 _gestures.Remove(name);
-            Gesture newPrototype = new Gesture(name, points);
-            _gestures.Add(name, newPrototype);
+            //Gesture newPrototype = new Gesture(name, points);
+            //_gestures.Add(name, newPrototype);
 
             // figure out the duration of the gesture
             PointR p0 = (PointR) points[0];
@@ -194,7 +195,7 @@ namespace Recognizer.HMM
                 writer.WriteStartElement("Gesture");
                 writer.WriteAttributeString("Name", name);
                 writer.WriteAttributeString("NumPts", XmlConvert.ToString(points.Count));
-                writer.WriteAttributeString("Millseconds", XmlConvert.ToString(pn.T - p0.T));
+                writer.WriteAttributeString("MillSeconds", XmlConvert.ToString(pn.T - p0.T));
                 writer.WriteAttributeString("AppName", Assembly.GetExecutingAssembly().GetName().Name);
                 writer.WriteAttributeString("AppVer", Assembly.GetExecutingAssembly().GetName().Version.ToString());
                 writer.WriteAttributeString("Date", DateTime.Now.ToLongDateString());
@@ -228,6 +229,138 @@ namespace Recognizer.HMM
                     writer.Close();
             }
             return success; // Xml file successfully written (or not)
+        }
+
+        public bool SaveDirectionalCodewords(string filename, List<String> _directionalCodewordsList)
+        {
+
+            //// do the xml writing
+            //bool success = true;
+            ////打开文件()  ,或通过File创建立如：fs = File.Create(path, 1024)
+            //StreamWriter sw = File.CreateText(filename);
+            //try
+            //{
+            //    for (int i = 0; i < points.Count; i++)
+            //    {
+            //        sw.WriteLine(points[i]);
+
+            //    }
+
+            //}
+            //catch (Exception ex)
+            //{
+            //    Console.Write(ex.Message);
+            //    success = false;
+            //}
+            //finally
+            //{
+            //    if (sw != null)
+            //        sw.Close();
+            //}
+            //return success; // Xml file successfully written (or not)
+            // add the new prototype with the name extracted from the filename.
+            string name = Gesture.ParseName(filename);
+            if (_gestures.ContainsKey(name))
+                _gestures.Remove(name);
+            //Gesture newPrototype = new Gesture(name, points);
+            //_gestures.Add(name, newPrototype);
+
+
+            // do the xml writing
+            bool success = true;
+            XmlTextWriter writer = null;
+            try
+            {
+                // save the prototype as an Xml file
+                writer = new XmlTextWriter(filename, Encoding.UTF8);
+                writer.Formatting = Formatting.Indented;
+                writer.WriteStartDocument(true);
+                writer.WriteStartElement("DirectionalCodewordsList");
+                writer.WriteAttributeString("Name", name);
+                writer.WriteAttributeString("NumDws", XmlConvert.ToString(_directionalCodewordsList.Count));
+                writer.WriteAttributeString("AppName", Assembly.GetExecutingAssembly().GetName().Name);
+                writer.WriteAttributeString("AppVer", Assembly.GetExecutingAssembly().GetName().Version.ToString());
+                writer.WriteAttributeString("Date", DateTime.Now.ToLongDateString());
+                writer.WriteAttributeString("TimeOfDay", DateTime.Now.ToLongTimeString());
+
+                // write out the raw individual points
+                foreach (String p in _directionalCodewordsList)
+                {
+                    writer.WriteStartElement("DirectionalCodewords");
+                    writer.WriteAttributeString("List", p);
+                    writer.WriteEndElement(); // <Point />
+                }
+
+                writer.WriteEndDocument(); // </Gesture>
+            }
+            catch (XmlException xex)
+            {
+                Console.Write(xex.Message);
+                success = false;
+            }
+            catch (Exception ex)
+            {
+                Console.Write(ex.Message);
+                success = false;
+            }
+            finally
+            {
+                if (writer != null)
+                    writer.Close();
+            }
+            return success; // Xml file successfully written (or not)
+        }
+
+        /// <summary>
+        ///   Decodes a sequence in string form into is integer array form.
+        ///   Example: Converts "1-2-1-3-5" into int[] {1,2,1,3,5}
+        /// </summary>
+        /// <returns></returns>
+        private int[] decode(String sequence)
+        {
+            string[] elements = sequence.Split('-');
+            int[] integers = new int[elements.Length];
+
+            for (int j = 0; j < elements.Length; j++)
+                integers[j] = int.Parse(elements[j]);
+
+            return integers;
+        }
+
+        public List<int[]> LoadDirectionalCodewordsFile(string filename)
+        {
+            List<int[]> inputSequences = new List<int[]>(256);
+            XmlTextReader reader = null;
+            try
+            {
+                reader = new XmlTextReader(filename);
+                reader.WhitespaceHandling = WhitespaceHandling.None;
+                reader.MoveToContent();
+
+
+                reader.Read(); // advance to the first Point
+
+                while (reader.NodeType != XmlNodeType.EndElement)
+                {
+                    inputSequences.Add(decode(reader.GetAttribute("List")));
+                    reader.ReadStartElement("DirectionalCodewords");
+                }
+            }
+            catch (XmlException xex)
+            {
+                Console.Write(xex.Message);
+            }
+            catch (Exception ex)
+            {
+                Console.Write(ex.Message);
+            }
+            finally
+            {
+                if (reader != null)
+                    reader.Close();
+            }
+
+            return inputSequences;
         }
 
         public bool LoadGesture(string filename)

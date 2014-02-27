@@ -316,7 +316,7 @@ namespace Recognizer.HMM
         ///   Example: Converts "1-2-1-3-5" into int[] {1,2,1,3,5}
         /// </summary>
         /// <returns></returns>
-        private int[] decode(String sequence)
+        public int[] decode(String sequence)
         {
             string[] elements = sequence.Split('-');
             int[] integers = new int[elements.Length];

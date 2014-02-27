@@ -30,6 +30,8 @@ namespace Recognizer.HMM
         
         private String _directionalCodewords;
 
+        private HiddenMarkovClassifier hmmc;
+
 
         #endregion
 
@@ -477,11 +479,15 @@ namespace Recognizer.HMM
                        
                         Invalidate();
                     }
-                    else if (_rec.NumGestures > 0) // not recording, so testing
+                    else if (hmmc != null) // not recording, so testing
                     {
 
-                        Application.DoEvents(); // forces label to display
+                        //Application.DoEvents(); // forces label to display
 
+                        _directionalCodewords = _directionalCodewords.Substring(1, _directionalCodewords.Length - 1);
+                            int x = hmmc.Compute(_rec.decode(_directionalCodewords));
+                            lblResult.Text = x+"";
+                            Invalidate();
                     }
                 }
             }
@@ -515,16 +521,18 @@ namespace Recognizer.HMM
                 for (int i = 0; i < dlg.FileNames.Length; i++)
                 {
                     string name = dlg.FileNames[i];
-                    inputSequences = _rec.LoadDirectionalCodewordsFile(name);
-                    for (int j = 0; j < inputSequences.Count; j++)
+                    List<int[]> inputSequencesTemp = _rec.LoadDirectionalCodewordsFile(name);
+
+                    for (int j = 0; j < inputSequencesTemp.Count; j++)
                     {
+                        inputSequences.Add(inputSequencesTemp[j]);
                         outputLabels.Add(i);
                     }
                 }
                 ReloadViewForm();
             }
             ITopology forward = new Forward(5, 3);
-            HiddenMarkovClassifier hmmc = new HiddenMarkovClassifier(3, forward, 16);
+            hmmc = new HiddenMarkovClassifier(3, forward, 16);
             // And create a algorithms to teach each of the inner models
             var teacher = new HiddenMarkovClassifierLearning(hmmc,
 
@@ -535,8 +543,6 @@ namespace Recognizer.HMM
                     Iterations = 0     // don't place an upper limit on the number of iterations
                 });
             teacher.Run((int[][])inputSequences.ToArray(), (int[])outputLabels.ToArray());
-            int i1 = hmmc.Compute(new[]{0,0});
-            int i2 = hmmc.Compute(new[] { 0, 0 });
         }
     }
 }

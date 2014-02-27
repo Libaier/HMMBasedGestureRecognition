@@ -5,5 +5,5 @@ An implementation of the HMM-based threshold model approach for gesture recognit
 
 The HMM part of the project is implement by "A C++ Implementation of Hidden Markov Model"(http://webdocs.cs.ualberta.ca/~lindek/hmm.htm)
 
-If your have any problems about this project.
+If you have any problems about this project.
 Please contact me at libaier.gc@gmail.com

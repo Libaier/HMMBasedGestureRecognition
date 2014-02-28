@@ -11,8 +11,6 @@ using Accord.Statistics.Models.Markov.Topology;
 using Accord.Statistics.Models.Markov;
 using Accord.Statistics.Models.Markov.Learning;
 
-
-
 namespace Recognizer.HMM
 {
     public class MainForm : System.Windows.Forms.Form
@@ -30,8 +28,12 @@ namespace Recognizer.HMM
         
         private String _directionalCodewords;
 
-        private HiddenMarkovClassifier hmmc;
+        private String info;
 
+        private HiddenMarkovClassifier hmmc;
+        private HiddenMarkovModel[] hmms;
+        //Font 
+        private Font _font;
 
         #endregion
 
@@ -72,6 +74,7 @@ namespace Recognizer.HMM
             _points = new ArrayList();
             _directionalCodewordsList = new List<string>();
             _pointsList = new List<ArrayList>();
+            _font = new Font(FontFamily.GenericSansSerif, 8.25f);
             _viewFrm = null;
         }
 
@@ -402,6 +405,8 @@ namespace Recognizer.HMM
             {
                 PointF p = (PointF)r; // cast
                 e.Graphics.FillEllipse(_recording ? Brushes.Firebrick : Brushes.DarkBlue, p.X - 2f, p.Y - 2f, 4f, 4f);
+                
+                e.Graphics.DrawString(info,_font,Brushes.Black,new PointF(20,40));
             }
         }
 
@@ -430,8 +435,8 @@ namespace Recognizer.HMM
                     {
                         _points.Clear();
                     }
-                    
-                    lblResult.Text = _directionalCodewordsList.Count + "";
+
+                    info = "Sample count:" + _directionalCodewordsList.Count;
                     Invalidate();
                 }
             }
@@ -449,14 +454,44 @@ namespace Recognizer.HMM
         {
             if (_isDown)
             {
-                if (_points.Count >= 2)
+                if (_points.Count == 2)
+                {
+                    PointR p = (PointR)_points[_points.Count - 1];
+                    _directionalCodewords = ""+getDirectionalCodewords(e.X, e.Y, p.X, p.Y);
+                }else if (_points.Count > 2)
                 {
                     PointR p = (PointR)_points[_points.Count - 1];
                     _directionalCodewords = _directionalCodewords + "-" + getDirectionalCodewords(e.X, e.Y, p.X, p.Y);
                 }
                 _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
-                Invalidate(new Rectangle(e.X - 2, e.Y - 2, 4, 4));
+                if (hmmc != null&&_directionalCodewords!=null&&!_recording) // not recording, so testing
+                {
+                    //lblResult.Text = "Recognizing...";
+                    info = null;
+                    info = info + _directionalCodewords + "\n";
+                    int[] observations = _rec.decode(_directionalCodewords);
+                    foreach(HiddenMarkovModel hmm in hmms)
+                    {
+                        info = info + hmm.Tag + "\t" + hmm.Evaluate(observations) + "\t";
+                        int[] viterbipath = hmm.Decode(observations);
+                        foreach (int state in viterbipath)
+                        {
+                            info = info + state + " ";
+                        }
+                        info = info + "\n";
+                      
+                    }
+                    info = info + "ThresholdModel\t" + hmmc.Threshold.Evaluate(observations) + "\t";
+                    int[] viterbipathTM = hmmc.Threshold.Decode(observations);
+                    foreach (int state in viterbipathTM)
+                    {
+                        info = info + state + " ";
+                    }
+                    info = info + "\n";
+                }
+                
             }
+            Invalidate();
         }
 
         private void MainForm_MouseUp(object sender, System.Windows.Forms.MouseEventArgs e)
@@ -469,13 +504,13 @@ namespace Recognizer.HMM
                 {
                     if (_recording)
                     {
-                        _directionalCodewords = _directionalCodewords.Substring(1, _directionalCodewords.Length - 1);
+                        //_directionalCodewords = _directionalCodewords.Substring(1, _directionalCodewords.Length - 1);
                         _directionalCodewordsList.Add(_directionalCodewords);
 
                         _pointsList.Add(new ArrayList(_points));
 
 
-                        lblResult.Text = _directionalCodewordsList.Count + "";
+                        info = "Sample count:" + _directionalCodewordsList.Count;
                        
                         Invalidate();
                     }
@@ -484,10 +519,11 @@ namespace Recognizer.HMM
 
                         //Application.DoEvents(); // forces label to display
 
-                        _directionalCodewords = _directionalCodewords.Substring(1, _directionalCodewords.Length - 1);
-                            int x = hmmc.Compute(_rec.decode(_directionalCodewords));
-                            lblResult.Text = x+"";
-                            Invalidate();
+                        //_directionalCodewords = _directionalCodewords.Substring(1, _directionalCodewords.Length - 1);
+                        //double prob;
+                        //int x = hmmc.Compute(_rec.decode(_directionalCodewords), out prob);
+                        //lblResult.Text = x + " Prob:" + prob;
+                        Invalidate();
                     }
                 }
             }
@@ -509,6 +545,7 @@ namespace Recognizer.HMM
 
             List<int> outputLabels = new List<int>(256);
             List<int[]> inputSequences = new List<int[]>(256);
+            lblResult.Text = "Training...";
 
             OpenFileDialog dlg = new OpenFileDialog();
             dlg.Filter = "Gestures (*.xml)|*.xml";
@@ -543,6 +580,15 @@ namespace Recognizer.HMM
                     Iterations = 0     // don't place an upper limit on the number of iterations
                 });
             teacher.Run((int[][])inputSequences.ToArray(), (int[])outputLabels.ToArray());
+            hmmc.Threshold = teacher.Threshold();
+            hmmc.Sensitivity = 1;
+            hmms = hmmc.Models;
+            for (int i = 0; i < dlg.FileNames.Length; i++)
+            {
+
+                hmms[i].Tag = Gesture.ParseName(dlg.FileNames[i]);
+            }
+            lblResult.Text = "Success!!";
         }
     }
 }

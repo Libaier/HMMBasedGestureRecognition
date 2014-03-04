@@ -4,3 +4,16 @@ C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecogn
 C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\obj\Release\Recognizer.HMM.ViewForm.resources
 C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\obj\Release\HMMBasedGestureRecognition.csproj.GenerateResource.Cache
 C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\obj\Release\Recognizer.HMM.exe
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Release\Recognizer.HMM.exe.config
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Release\Accord.dll
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Release\Accord.Math.dll
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Release\Accord.Statistics.dll
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Release\AForge.Math.dll
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Release\AForge.dll
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Release\Accord.pdb
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Release\Accord.xml
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Release\Accord.Math.pdb
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Release\Accord.Math.xml
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Release\Accord.Statistics.pdb
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\bin\Release\Accord.Statistics.xml
+C:\Users\baier\Documents\GitHub\HMMBasedGestureRecognition\HMMBasedGestureRecognition\obj\Release\HMMBasedGestureRecognition.csprojResolveAssemblyReference.cache

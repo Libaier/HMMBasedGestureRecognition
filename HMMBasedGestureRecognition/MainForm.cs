@@ -586,7 +586,10 @@ namespace Recognizer.HMM
                     _points.Clear();
                     if (_pointsList.Count - 1 >= 0)
                     {
-                        _points = _pointsList[_pointsList.Count - 1];
+                        foreach (PointR p in _pointsList[_pointsList.Count - 1])
+                        {
+                            _points.Add(new PointR(p.X,p.Y));
+                        }
                     }
                     _info = "Sample count:" + _directionalCodewordsList.Count;
                     Invalidate();
@@ -604,86 +607,92 @@ namespace Recognizer.HMM
 
         private void MainForm_MouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
         {
-            if (_isDown)
+            if (e.Button == MouseButtons.Left)
             {
-                if (_points.Count >= 2)
-                {
-                    PointR p = (PointR)_points[_points.Count - 1];
-                    //_directionalCodewords = "" + getDirectionalCodewords(e.X, e.Y, p.X, p.Y);
-                    _directionalCodewordsQueue.Enqueue(getDirectionalCodewords(e.X, e.Y, p.X, p.Y));
-                    if (_directionalCodewordsQueue.Count > _maxCount)
-                    {
-                        _directionalCodewordsQueue.Dequeue();
-                    }
-                }
-                _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
 
-                //info = info + "a";
-                if (_hmmc != null && _directionalCodewordsQueue.Count>1&&!_recording) // not recording, so testing
+                if (_isDown)
                 {
-                    Queue<int> directionalCodewordsQueueTemp = _directionalCodewordsQueue;
-                    while (directionalCodewordsQueueTemp.Count > 40)
-                    {
-                        //lblResult.Text = "Recognizing...";
-                        _info = null;
-                        _info = _info + _rec.encode(_directionalCodewordsQueue.ToArray()) + "\n";
-                        //int[] observations = _rec.decode(_directionalCodewords);
-                        int[] observations = directionalCodewordsQueueTemp.ToArray();
-                        _info = _info + _hmmc.Compute(observations)+"\n";
 
-                        string gestureName = (string)_hmms[0].Tag;
-                        double probTemp = 0;
-                        _hmmc[0].Decode(observations, out probTemp);
-                        //double probTemp = hmms[0].Evaluate(observations);
-                        foreach (HiddenMarkovModel hmm in _hmms)
+                    if (_points.Count >= 2)
+                    {
+                        PointR p = (PointR)_points[_points.Count - 1];
+                        //_directionalCodewords = "" + getDirectionalCodewords(e.X, e.Y, p.X, p.Y);
+                        _directionalCodewordsQueue.Enqueue(getDirectionalCodewords(e.X, e.Y, p.X, p.Y));
+                        if (_directionalCodewordsQueue.Count > _maxCount)
                         {
-                            //double prob = hmm.Evaluate(observations);
-                            double prob = 0;
-                            int[] viterbipath = hmm.Decode(observations, out prob);
-                            if (prob > probTemp)
+                            _directionalCodewordsQueue.Dequeue();
+                        }
+                    }
+                    _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
+
+                    //info = info + "a";
+                    if (_hmmc != null && _directionalCodewordsQueue.Count > 1 && !_recording) // not recording, so testing
+                    {
+                        Queue<int> directionalCodewordsQueueTemp = _directionalCodewordsQueue;
+                        while (directionalCodewordsQueueTemp.Count > 40)
+                        {
+                            //lblResult.Text = "Recognizing...";
+                            _info = null;
+                            _info = _info + _rec.encode(_directionalCodewordsQueue.ToArray()) + "\n";
+                            //int[] observations = _rec.decode(_directionalCodewords);
+                            int[] observations = directionalCodewordsQueueTemp.ToArray();
+                            _info = _info + _hmmc.Compute(observations) + "\n";
+
+                            string gestureName = (string)_hmms[0].Tag;
+                            double probTemp = 0;
+                            _hmmc[0].Decode(observations, out probTemp);
+                            //double probTemp = hmms[0].Evaluate(observations);
+                            foreach (HiddenMarkovModel hmm in _hmms)
                             {
-                                gestureName = (string)hmm.Tag;
-                                probTemp = prob;
+                                //double prob = hmm.Evaluate(observations);
+                                double prob = 0;
+                                int[] viterbipath = hmm.Decode(observations, out prob);
+                                if (prob > probTemp)
+                                {
+                                    gestureName = (string)hmm.Tag;
+                                    probTemp = prob;
+                                }
+                                //info = info + hmm.Tag + "\t" + hmm.Evaluate(observations) + "\t";
+                                _info = _info + hmm.Tag + "\t" + prob + "\t";
+                                // = hmm.Decode(observations);
+                                foreach (int state in viterbipath)
+                                {
+                                    _info = _info + state + " ";
+                                }
+                                _info = _info + "\n";
+
                             }
-                            //info = info + hmm.Tag + "\t" + hmm.Evaluate(observations) + "\t";
-                            _info = _info + hmm.Tag + "\t" + prob + "\t";
-                            // = hmm.Decode(observations);
-                            foreach (int state in viterbipath)
+                            double probTM = 0;
+                            int[] viterbipathTM = _hmmc.Threshold.Decode(observations, out probTM);
+                            _info = _info + "ThresholdModel\t" + probTM + "\t";
+                            //hmmc.Threshold.Decode(observations);
+                            foreach (int state in viterbipathTM)
                             {
                                 _info = _info + state + " ";
                             }
                             _info = _info + "\n";
 
-                        }
-                        double probTM = 0;
-                        int[] viterbipathTM = _hmmc.Threshold.Decode(observations, out probTM);
-                        _info = _info + "ThresholdModel\t" + probTM + "\t";
-                        //hmmc.Threshold.Decode(observations);
-                        foreach (int state in viterbipathTM)
-                        {
-                            _info = _info + state + " ";
-                        }
-                        _info = _info + "\n";
+                            if (probTM > probTemp)
+                            {
+                                gestureName = "Threshold";
+                                _info = _info + "\n\n" + gestureName;
+                            }
+                            else
+                            {
 
-                        if (probTM > probTemp)
-                        {
-                            gestureName = "Threshold";
-                            _info = _info + "\n\n" + gestureName;
-                        }
-                        else
-                        {
-
-                            _info = _info + "\n\n" + gestureName;
-                            _directionalCodewordsQueue.Clear();
-                            break;
-                        }
-                        for (int loop = 0; loop < 10; loop++)
-                        {
-                            directionalCodewordsQueueTemp.Dequeue();
+                                _info = _info + "\n\n" + gestureName;
+                                _directionalCodewordsQueue.Clear();
+                                break;
+                            }
+                            for (int loop = 0; loop < 10; loop++)
+                            {
+                                directionalCodewordsQueueTemp.Dequeue();
+                            }
                         }
                     }
+                    Invalidate();
+
                 }
-                Invalidate();
 
             }
             //Invalidate(new Rectangle(e.X - 2, e.Y - 2, 4, 4));
@@ -692,23 +701,32 @@ namespace Recognizer.HMM
 
         private void MainForm_MouseUp(object sender, System.Windows.Forms.MouseEventArgs e)
         {
-            if (_isDown)
+            if (e.Button == MouseButtons.Left)
             {
-                _isDown = false;
 
-                if (_points.Count >= 5) // require 5 points for a valid gesture
+                if (_isDown)
                 {
-                    if (_recording)
+                    _isDown = false;
+                    if (_points.Count >= 5) // require 5 points for a valid gesture
                     {
-                        //_directionalCodewords = _directionalCodewords.Substring(1, _directionalCodewords.Length - 1);
-                        _directionalCodewordsList.Add(_rec.encode(_directionalCodewordsQueue.ToArray()));
+                        if (_recording)
+                        {
+                            //_directionalCodewords = _directionalCodewords.Substring(1, _directionalCodewords.Length - 1);
+                            _directionalCodewordsList.Add(_rec.encode(_directionalCodewordsQueue.ToArray()));
 
-                        _pointsList.Add((ArrayList)_points.Clone());
+                            //ArrayList pointsTemp = new ArrayList();
+                            //foreach (PointR r in _points)
+                            //{
+                            //    pointsTemp.Add(new PointR(r.X, r.Y));
+                            //}
+                            _pointsList.Add(new ArrayList(_points));
 
-                        _info = "Sample count:" + _pointsList.Count;
+                            _info = "Sample count:" + _pointsList.Count;
 
-                        Invalidate();
+                            Invalidate();
+                        }
                     }
+
                 }
             }
         }
@@ -721,8 +739,6 @@ namespace Recognizer.HMM
             return (int)(angle * (8 / 3.1425926)); // convert to <0, 16)
         }
         #endregion
-
-
 
     }
 }

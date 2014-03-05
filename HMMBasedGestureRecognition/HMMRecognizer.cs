@@ -327,6 +327,28 @@ namespace Recognizer.HMM
             return integers;
         }
 
+        /// <summary>
+        ///   Encodes a sequence in integer array form into string form .
+        ///   Example: Converts int[] {1,2,1,3,5} into "1-2-1-3-5"
+        /// </summary>
+        /// <returns></returns>
+        public String encode(int[] integers)
+        {
+            if (integers.Length == 0)
+            {
+                return null;
+            }
+            string sequence = "";
+
+            foreach (int i in integers)
+            {
+                sequence = sequence + "-" + i ;
+            }
+
+            sequence.Substring(1);
+            return sequence;
+        }
+
         public List<int[]> LoadDirectionalCodewordsFile(string filename)
         {
             List<int[]> inputSequences = new List<int[]>(256);

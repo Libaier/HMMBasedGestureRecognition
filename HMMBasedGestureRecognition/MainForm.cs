@@ -28,16 +28,17 @@ namespace Recognizer.HMM
 
         private List<String> _directionalCodewordsList;
 
-        private String _directionalCodewords;
+        //private String _directionalCodewords;
 
-        private String info = "null";
+        private String _info = "null";
 
-        private HiddenMarkovClassifier hmmc;
-        private HiddenMarkovModel[] hmms;
+        private HiddenMarkovClassifier _hmmc;
+        private HiddenMarkovModel[] _hmms;
         //Font 
         private Font _font;
+        private int _maxCount = 200;
 
-        private Thread ComputingThread;
+        //private Thread ComputingThread;
 
         #endregion
 
@@ -85,8 +86,8 @@ namespace Recognizer.HMM
             _viewFrm = null;
             lblResult.Text = String.Empty;
             this.KeyPreview = true;
-            ComputingThread = new Thread(new ThreadStart(this.HMMDecode));
-            ComputingThread.Start();
+            //ComputingThread = new Thread(new ThreadStart(this.HMMDecode));
+            //ComputingThread.Start();
             // Spin for a while waiting for the started thread to become
             // alive:
             //while (!ComputingThread.IsAlive) ;
@@ -106,7 +107,6 @@ namespace Recognizer.HMM
                     components.Dispose();
                 }
             }
-            ComputingThread.Abort();
             base.Dispose(disposing);
         }
 
@@ -223,19 +223,19 @@ namespace Recognizer.HMM
             // LoadAndTrain
             // 
             this.LoadAndTrain.Index = 0;
-            this.LoadAndTrain.Text = "&Load And Train...";
+            this.LoadAndTrain.Text = "&Load .xml And Train...";
             this.LoadAndTrain.Click += new System.EventHandler(this.LoadAndTrain_Click);
             // 
             // LoadFromHMMFile
             // 
             this.LoadFromHMMFile.Index = 1;
-            this.LoadFromHMMFile.Text = "Load From &HMM File...";
+            this.LoadFromHMMFile.Text = "Load From .&hmm File...";
             this.LoadFromHMMFile.Click += new System.EventHandler(this.LoadFromHMMFile_Click);
             // 
             // SaveHMMFile
             // 
             this.SaveHMMFile.Index = 2;
-            this.SaveHMMFile.Text = "&Save HMM File";
+            this.SaveHMMFile.Text = "&Save to .hmm File";
             this.SaveHMMFile.Click += new System.EventHandler(this.SaveHMMFile_Click);
             // 
             // HelpMenu
@@ -276,13 +276,17 @@ namespace Recognizer.HMM
             this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Show;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Recognizer.HMM";
-           
+            this.Load += new System.EventHandler(this.MainForm_Load);
             this.Paint += new System.Windows.Forms.PaintEventHandler(this.MainForm_Paint);
             this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.MainForm_KeyUp);
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseDown);
             this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseMove);
             this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseUp);
             this.ResumeLayout(false);
+
+        }
+        private void MainForm_Load(object sender, EventArgs e)
+        {
 
         }
         #endregion
@@ -339,7 +343,6 @@ namespace Recognizer.HMM
             }
         }
 
-        // helper fn
         private void ReloadViewForm()
         {
             if (_viewFrm != null && !_viewFrm.IsDisposed)
@@ -444,37 +447,37 @@ namespace Recognizer.HMM
 
             //ITopology forward = new Forward(4,3);
             ITopology[] forwards = new Forward[4];
-            forwards[0] = new Forward(5,3);
-            forwards[1] = new Forward(5,3);
-            forwards[2] = new Forward(5,3);
-            forwards[3] = new Forward(5,3);
-            hmmc = new HiddenMarkovClassifier(4, forwards, 16);
+            forwards[0] = new Forward(5, 3);
+            forwards[1] = new Forward(5, 3);
+            forwards[2] = new Forward(5, 3);
+            forwards[3] = new Forward(5, 3);
+            _hmmc = new HiddenMarkovClassifier(4, forwards, 16);
             //hmmc.Models[0] = new HiddenMarkovModel();
             //hmmc.Models[0].Transitions = null;kovModel();
             // And create a algorithms to teach each of the inner models
-            var teacher = new HiddenMarkovClassifierLearning(hmmc,
+            var teacher = new HiddenMarkovClassifierLearning(_hmmc,
 
                 // We can specify individual training options for each inner model:
-                modelIndex => new BaumWelchLearning(hmmc.Models[modelIndex])
+                modelIndex => new BaumWelchLearning(_hmmc.Models[modelIndex])
                 {
                     Tolerance = 0.001, // iterate until log-likelihood changes less than 0.001
                     Iterations = 0     // don't place an upper limit on the number of iterations
                 });
             teacher.Run((int[][])inputSequences.ToArray(), (int[])outputLabels.ToArray());
 
-            hmmc.Threshold = teacher.Threshold();
-            hmmc.Sensitivity = 1;
-            hmms = hmmc.Models;
+            _hmmc.Threshold = teacher.Threshold();
+            _hmmc.Sensitivity = 1;
+            _hmms = _hmmc.Models;
             for (int i = 0; i < dlg.FileNames.Length; i++)
             {
-
-                hmms[i].Tag = Gesture.ParseName(dlg.FileNames[i]);
+                _hmms[i].Tag = Gesture.ParseName(dlg.FileNames[i]);
             }
             lblResult.Text = "Success!!";
         }
+
         private void SaveHMMFile_Click(object sender, EventArgs e)
         {
-            if (hmmc != null)
+            if (_hmmc != null)
             {
                 SaveFileDialog dlg = new SaveFileDialog();
                 dlg.Filter = "Gestures (*.hmm)|*.hmm";
@@ -484,7 +487,7 @@ namespace Recognizer.HMM
 
                 if (dlg.ShowDialog(this) == DialogResult.OK)
                 {
-                    hmmc.Save(dlg.FileName);
+                    _hmmc.Save(dlg.FileName);
                     ReloadViewForm();
                 }
 
@@ -504,9 +507,9 @@ namespace Recognizer.HMM
 
             if (dlg.ShowDialog(this) == DialogResult.OK)
             {
-                hmmc = HiddenMarkovClassifier.Load(dlg.FileName);
-                hmms = hmmc.Models;
-                if (hmmc != null)
+                _hmmc = HiddenMarkovClassifier.Load(dlg.FileName);
+                _hmms = _hmmc.Models;
+                if (_hmmc != null)
                 {
                     lblResult.Text = "Success!!";
                 }
@@ -534,13 +537,7 @@ namespace Recognizer.HMM
                 PointF p0 = (PointF)(PointR)_points[0]; // draw the first point bigger
                 e.Graphics.FillEllipse(_recording ? Brushes.Firebrick : Brushes.DarkBlue, p0.X - 5f, p0.Y - 5f, 10f, 10f);
             }
-            e.Graphics.DrawString(info, _font, Brushes.Black, new PointF(20, 40));
-
-            //for (int loop = 0; loop < _points.Count; loop++)
-            //{
-            //     PointF p = (PointF)(PointR)_points[loop]; // cast
-            //     e.Graphics.FillEllipse(_recording ? Brushes.Firebrick : Brushes.DarkBlue, p0.X - 5f, p0.Y - 5f, 10f, 10f);
-            //}
+            e.Graphics.DrawString(_info, _font, Brushes.Black, new PointF(20, 40));
 
             foreach (PointR r in _points)
             {
@@ -553,25 +550,25 @@ namespace Recognizer.HMM
         #region Keyboard Events
         private void MainForm_KeyUp(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Up)
-            {
+            //if (e.KeyCode == Keys.Up)
+            //{
 
-                if (hmmc != null)
-                {
-                    hmmc.Sensitivity++;
-                    info = "Sensitivity:" + hmmc.Sensitivity;
-                }
-            }
+            //    if (hmmc != null)
+            //    {
+            //        hmmc.Sensitivity++;
+            //        info = "Sensitivity:" + hmmc.Sensitivity;
+            //    }
+            //}
 
-            if (e.KeyCode == Keys.Down)
-            {
+            //if (e.KeyCode == Keys.Down)
+            //{
 
-                if (hmmc != null)
-                {
-                    hmmc.Sensitivity--;
-                    info = "Sensitivity:" + hmmc.Sensitivity;
-                }
-            }
+            //    if (hmmc != null)
+            //    {
+            //        hmmc.Sensitivity--;
+            //        info = "Sensitivity:" + hmmc.Sensitivity;
+            //    }
+            //}
 
         }
         #endregion
@@ -582,28 +579,23 @@ namespace Recognizer.HMM
         {
             if (e.Button == MouseButtons.Right)
             {
-                if (_directionalCodewordsList.Count >= 1)
+                if (_pointsList.Count >= 1)
                 {
                     _directionalCodewordsList.RemoveAt(_directionalCodewordsList.Count - 1);
                     _pointsList.RemoveAt(_pointsList.Count - 1);
+                    _points.Clear();
                     if (_pointsList.Count - 1 >= 0)
                     {
                         _points = _pointsList[_pointsList.Count - 1];
                     }
-                    else
-                    {
-                        _points.Clear();
-                    }
-
-                    info = "Sample count:" + _directionalCodewordsList.Count;
+                    _info = "Sample count:" + _directionalCodewordsList.Count;
                     Invalidate();
                 }
             }
-            else
+            if (e.Button == MouseButtons.Left)
             {
                 _isDown = true;
                 _points.Clear();
-                _directionalCodewords = null;
                 _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
                 _directionalCodewordsQueue.Clear();
                 Invalidate();
@@ -614,51 +606,36 @@ namespace Recognizer.HMM
         {
             if (_isDown)
             {
-                //if (_points.Count > 30)
-                //{
-
-                //    _points.Clear();
-                //    _directionalCodewords = null;
-                //}
-                //if (_points.Count == 2)
-                //{
-                //    PointR p = (PointR)_points[_points.Count - 1];
-                //    _directionalCodewords = "" + getDirectionalCodewords(e.X, e.Y, p.X, p.Y);
-                //    _directionalCodewordsQueue.Enqueue(getDirectionalCodewords(e.X, e.Y, p.X, p.Y));
-                //}
-                if (_points.Count >=2)
+                if (_points.Count >= 2)
                 {
-                    //PointR p = (PointR)_directionalCodewordsQueue.ToArray()[_directionalCodewordsQueue.Count - 1];
-                    //_directionalCodewords = _directionalCodewords + "-" + getDirectionalCodewords(e.X, e.Y, p.X, p.Y);
-
                     PointR p = (PointR)_points[_points.Count - 1];
                     //_directionalCodewords = "" + getDirectionalCodewords(e.X, e.Y, p.X, p.Y);
                     _directionalCodewordsQueue.Enqueue(getDirectionalCodewords(e.X, e.Y, p.X, p.Y));
-                    if (_directionalCodewordsQueue.Count > 200)
+                    if (_directionalCodewordsQueue.Count > _maxCount)
                     {
                         _directionalCodewordsQueue.Dequeue();
                     }
-                    
-                    
                 }
                 _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
 
                 //info = info + "a";
-                if (hmmc != null&& !_recording) // not recording, so testing
+                if (_hmmc != null && _directionalCodewordsQueue.Count>1&&!_recording) // not recording, so testing
                 {
-                    Queue<int> _directionalCodewordsQueueTemp = _directionalCodewordsQueue;
-                    while (_directionalCodewordsQueueTemp.Count > 40)
+                    Queue<int> directionalCodewordsQueueTemp = _directionalCodewordsQueue;
+                    while (directionalCodewordsQueueTemp.Count > 40)
                     {
                         //lblResult.Text = "Recognizing...";
-                        info = null;
-                        info = info + _directionalCodewords + "\n";
+                        _info = null;
+                        _info = _info + _rec.encode(_directionalCodewordsQueue.ToArray()) + "\n";
                         //int[] observations = _rec.decode(_directionalCodewords);
-                        int[] observations = _directionalCodewordsQueueTemp.ToArray();
-                        string gestureName = (string)hmms[0].Tag;
+                        int[] observations = directionalCodewordsQueueTemp.ToArray();
+                        _info = _info + _hmmc.Compute(observations)+"\n";
+
+                        string gestureName = (string)_hmms[0].Tag;
                         double probTemp = 0;
-                        hmmc[0].Decode(observations, out probTemp);
+                        _hmmc[0].Decode(observations, out probTemp);
                         //double probTemp = hmms[0].Evaluate(observations);
-                        foreach (HiddenMarkovModel hmm in hmms)
+                        foreach (HiddenMarkovModel hmm in _hmms)
                         {
                             //double prob = hmm.Evaluate(observations);
                             double prob = 0;
@@ -669,52 +646,48 @@ namespace Recognizer.HMM
                                 probTemp = prob;
                             }
                             //info = info + hmm.Tag + "\t" + hmm.Evaluate(observations) + "\t";
-                            info = info + hmm.Tag + "\t" + prob + "\t";
+                            _info = _info + hmm.Tag + "\t" + prob + "\t";
                             // = hmm.Decode(observations);
                             foreach (int state in viterbipath)
                             {
-                                info = info + state + " ";
+                                _info = _info + state + " ";
                             }
-                            info = info + "\n";
+                            _info = _info + "\n";
 
                         }
                         double probTM = 0;
-                        int[] viterbipathTM = hmmc.Threshold.Decode(observations, out probTM);
-                        info = info + "ThresholdModel\t" + probTM + "\t";
+                        int[] viterbipathTM = _hmmc.Threshold.Decode(observations, out probTM);
+                        _info = _info + "ThresholdModel\t" + probTM + "\t";
                         //hmmc.Threshold.Decode(observations);
                         foreach (int state in viterbipathTM)
                         {
-                            info = info + state + " ";
+                            _info = _info + state + " ";
                         }
-                        info = info + "\n";
+                        _info = _info + "\n";
 
                         if (probTM > probTemp)
                         {
                             gestureName = "Threshold";
-                            info = info + "\n\n" + gestureName;
+                            _info = _info + "\n\n" + gestureName;
                         }
-                        else 
+                        else
                         {
-                            
-                            info = info + "\n\n" + gestureName;
+
+                            _info = _info + "\n\n" + gestureName;
+                            _directionalCodewordsQueue.Clear();
                             break;
                         }
-
-                        
-
                         for (int loop = 0; loop < 10; loop++)
                         {
-                            _directionalCodewordsQueueTemp.Dequeue();
+                            directionalCodewordsQueueTemp.Dequeue();
                         }
                     }
-
-
                 }
                 Invalidate();
 
             }
             //Invalidate(new Rectangle(e.X - 2, e.Y - 2, 4, 4));
-          
+
         }
 
         private void MainForm_MouseUp(object sender, System.Windows.Forms.MouseEventArgs e)
@@ -728,12 +701,11 @@ namespace Recognizer.HMM
                     if (_recording)
                     {
                         //_directionalCodewords = _directionalCodewords.Substring(1, _directionalCodewords.Length - 1);
-                        _directionalCodewordsList.Add(_directionalCodewords);
+                        _directionalCodewordsList.Add(_rec.encode(_directionalCodewordsQueue.ToArray()));
 
-                        _pointsList.Add(new ArrayList(_points));
+                        _pointsList.Add((ArrayList)_points.Clone());
 
-
-                        info = "Sample count:" + _directionalCodewordsList.Count;
+                        _info = "Sample count:" + _pointsList.Count;
 
                         Invalidate();
                     }
@@ -750,69 +722,6 @@ namespace Recognizer.HMM
         }
         #endregion
 
-        #region Compute
-        private void HMMDecode()
-        {
-            //lock (info)
-            //{
-            //    while (true)
-            //    {
-            //        //info = info + "a";
-            //        if (hmmc != null && _directionalCodewords != null && !_recording) // not recording, so testing
-            //        {
-            //            //lblResult.Text = "Recognizing...";
-            //            info = null;
-            //            info = info + _directionalCodewords + "\n";
-            //            int[] observations = _rec.decode(_directionalCodewords);
-            //            string gestureName = (string)hmms[0].Tag;
-            //            double probTemp = 0;
-            //            hmmc[0].Decode(observations, out probTemp);
-            //            //double probTemp = hmms[0].Evaluate(observations);
-            //            foreach (HiddenMarkovModel hmm in hmms)
-            //            {
-            //                //double prob = hmm.Evaluate(observations);
-            //                double prob = 0;
-            //                int[] viterbipath = hmm.Decode(observations, out prob);
-            //                if (prob > probTemp)
-            //                {
-            //                    gestureName = (string)hmm.Tag;
-            //                    probTemp = prob;
-            //                }
-            //                //info = info + hmm.Tag + "\t" + hmm.Evaluate(observations) + "\t";
-            //                info = info + hmm.Tag + "\t" + prob + "\t";
-            //                // = hmm.Decode(observations);
-            //                foreach (int state in viterbipath)
-            //                {
-            //                    info = info + state + " ";
-            //                }
-            //                info = info + "\n";
-
-            //            }
-            //            double probTM = 0;
-            //            int[] viterbipathTM = hmmc.Threshold.Decode(observations, out probTM);
-            //            info = info + "ThresholdModel\t" + probTM + "\t";
-            //            //hmmc.Threshold.Decode(observations);
-            //            foreach (int state in viterbipathTM)
-            //            {
-            //                info = info + state + " ";
-            //            }
-            //            info = info + "\n";
-
-            //            if (probTM > probTemp)
-            //            {
-            //                gestureName = "Threshold";
-            //            }
-
-            //            info = info + "\n\n" + gestureName;
-                       
-            //        }
-            //    }
-            //}
-
-        }
-
-
-        #endregion
 
 
     }

@@ -5,7 +5,7 @@ An implementation of the HMM-based threshold model approach for gesture recognit
 
 The HMM part of the project is implement by Accord .NET Framework(http://accord-framework.net/)
 
-It's 3D gesture recognition.The data is collect by Optitrack and Motive(http://www.naturalpoint.com/optitrack/)
+It's 3D gesture recognition.The data is collected by Optitrack and Motive(http://www.naturalpoint.com/optitrack/)
 
 If you have any problems about this project.
 Please contact me at libaier.gc@gmail.com

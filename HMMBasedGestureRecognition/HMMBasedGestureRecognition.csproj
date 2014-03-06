@@ -79,6 +79,10 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="NatNetML, Version=2.5.5021.42972, Culture=neutral, processorArchitecture=AMD64">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Externals\Optitrack\NatNetML.dll</HintPath>
+    </Reference>
     <Reference Include="System">
       <Name>System</Name>
     </Reference>
@@ -103,8 +107,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Category.cs" />
+    <Compile Include="HiResTimer.cs" />
     <Compile Include="HMMRecognizer.cs" />
     <Compile Include="NBestList.cs" />
+    <Compile Include="Optitrack.cs" />
     <Compile Include="PointR.cs" />
     <Compile Include="ProgressEvent.cs" />
     <Compile Include="SizeR.cs" />

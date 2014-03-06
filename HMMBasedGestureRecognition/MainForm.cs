@@ -30,7 +30,7 @@ namespace Recognizer.HMM
 
         //private String _directionalCodewords;
 
-        private String _info = "null";
+        private String _info;
 
         private HiddenMarkovClassifier _hmmc;
         private HiddenMarkovModel[] _hmms;
@@ -38,7 +38,19 @@ namespace Recognizer.HMM
         private Font _font;
         private int _maxCount = 200;
 
+        private bool _motiveStart = false;
+
         //private Thread ComputingThread;
+
+        // [NatNet] Our NatNet object
+        private NatNetML.NatNetClientML _NatNet;
+        // [NatNet] Our NatNet Frame of Data object
+        private NatNetML.FrameOfMocapData _FrameOfData = new NatNetML.FrameOfMocapData();
+
+        private float xOffSet = 0, yOffSet = 0;
+        private int scale = 1;
+        private int frameCnt = 0;
+        private const int MinNoPoints = 5;
 
         #endregion
 
@@ -60,6 +72,8 @@ namespace Recognizer.HMM
         private MenuItem LoadFromHMMFile;
         private Label lblResult;
         private MenuItem SaveHMMFile;
+        private MenuItem Optitrack;
+        private MenuItem LinkToMotive;
         private IContainer components;
 
         #endregion
@@ -106,6 +120,8 @@ namespace Recognizer.HMM
                 {
                     components.Dispose();
                 }
+
+                Disconnect();
             }
             base.Dispose(disposing);
         }
@@ -133,6 +149,8 @@ namespace Recognizer.HMM
             this.LoadAndTrain = new System.Windows.Forms.MenuItem();
             this.LoadFromHMMFile = new System.Windows.Forms.MenuItem();
             this.SaveHMMFile = new System.Windows.Forms.MenuItem();
+            this.Optitrack = new System.Windows.Forms.MenuItem();
+            this.LinkToMotive = new System.Windows.Forms.MenuItem();
             this.HelpMenu = new System.Windows.Forms.MenuItem();
             this.About = new System.Windows.Forms.MenuItem();
             this.lblResult = new System.Windows.Forms.Label();
@@ -158,6 +176,7 @@ namespace Recognizer.HMM
             this.FileMenu,
             this.GestureMenu,
             this.HMMMenu,
+            this.Optitrack,
             this.HelpMenu});
             // 
             // FileMenu
@@ -238,9 +257,22 @@ namespace Recognizer.HMM
             this.SaveHMMFile.Text = "&Save to .hmm File";
             this.SaveHMMFile.Click += new System.EventHandler(this.SaveHMMFile_Click);
             // 
+            // Optitrack
+            // 
+            this.Optitrack.Index = 3;
+            this.Optitrack.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
+            this.LinkToMotive});
+            this.Optitrack.Text = "&Optitrack";
+            // 
+            // LinkToMotive
+            // 
+            this.LinkToMotive.Index = 0;
+            this.LinkToMotive.Text = "&Link to Motive";
+            this.LinkToMotive.Click += new System.EventHandler(this.LinkToMotive_Click);
+            // 
             // HelpMenu
             // 
-            this.HelpMenu.Index = 3;
+            this.HelpMenu.Index = 4;
             this.HelpMenu.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
             this.About});
             this.HelpMenu.Text = "&Help";
@@ -447,7 +479,7 @@ namespace Recognizer.HMM
 
             //ITopology forward = new Forward(4,3);
             ITopology[] forwards = new Forward[4];
-            forwards[0] = new Forward(5, 3);
+            forwards[0] = new Forward(4, 2);
             forwards[1] = new Forward(5, 3);
             forwards[2] = new Forward(5, 3);
             forwards[3] = new Forward(5, 3);
@@ -473,6 +505,8 @@ namespace Recognizer.HMM
                 _hmms[i].Tag = Gesture.ParseName(dlg.FileNames[i]);
             }
             lblResult.Text = "Success!!";
+            int[] temp = { 1, 2, 3 };
+            _hmms[0].Decode(temp);
         }
 
         private void SaveHMMFile_Click(object sender, EventArgs e)
@@ -518,6 +552,16 @@ namespace Recognizer.HMM
         }
         #endregion
 
+        #region Optitrack Menu
+        private void LinkToMotive_Click(object sender, EventArgs e)
+        {
+            //Optitrack opt = new Optitrack(_points);
+            //_motiveStart = true;
+
+            _motiveStart = ConnectMotive();
+        }
+        #endregion
+
         #region About Menu
 
         private void About_Click(object sender, System.EventArgs e)
@@ -532,17 +576,20 @@ namespace Recognizer.HMM
 
         private void MainForm_Paint(object sender, System.Windows.Forms.PaintEventArgs e)
         {
-            if (_points.Count > 0)
+            lock (_points)
             {
-                PointF p0 = (PointF)(PointR)_points[0]; // draw the first point bigger
-                e.Graphics.FillEllipse(_recording ? Brushes.Firebrick : Brushes.DarkBlue, p0.X - 5f, p0.Y - 5f, 10f, 10f);
-            }
-            e.Graphics.DrawString(_info, _font, Brushes.Black, new PointF(20, 40));
+                if (_points.Count > 0)
+                {
+                    PointF p0 = (PointF)(PointR)_points[0]; // draw the first point bigger
+                    e.Graphics.FillEllipse(_recording ? Brushes.Firebrick : Brushes.DarkBlue, p0.X - 5f, p0.Y - 5f, 10f, 10f);
+                }
+                e.Graphics.DrawString(_info, _font, Brushes.Black, new PointF(20, 40));
 
-            foreach (PointR r in _points)
-            {
-                PointF p = (PointF)r; // cast
-                e.Graphics.FillEllipse(_recording ? Brushes.Firebrick : Brushes.DarkBlue, p.X - 2f, p.Y - 2f, 4f, 4f);
+                foreach (PointR r in _points)
+                {
+                    PointF p = (PointF)r; // cast
+                    e.Graphics.FillEllipse(_recording ? Brushes.Firebrick : Brushes.DarkBlue, p.X - 2f, p.Y - 2f, 4f, 4f);
+                }
             }
         }
         #endregion
@@ -577,6 +624,7 @@ namespace Recognizer.HMM
 
         private void MainForm_MouseDown(object sender, System.Windows.Forms.MouseEventArgs e)
         {
+
             if (e.Button == MouseButtons.Right)
             {
                 if (_pointsList.Count >= 1)
@@ -588,7 +636,7 @@ namespace Recognizer.HMM
                     {
                         foreach (PointR p in _pointsList[_pointsList.Count - 1])
                         {
-                            _points.Add(new PointR(p.X,p.Y));
+                            _points.Add(new PointR(p.X, p.Y));
                         }
                     }
                     _info = "Sample count:" + _directionalCodewordsList.Count;
@@ -599,14 +647,22 @@ namespace Recognizer.HMM
             {
                 _isDown = true;
                 _points.Clear();
-                _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
+                _directionalCodewordsQueue.Clear();
+                if (!_motiveStart)
+                {
+
+                    _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
+
+                }
                 _directionalCodewordsQueue.Clear();
                 Invalidate();
             }
+
         }
 
         private void MainForm_MouseMove(object sender, System.Windows.Forms.MouseEventArgs e)
         {
+
             if (e.Button == MouseButtons.Left)
             {
 
@@ -623,7 +679,12 @@ namespace Recognizer.HMM
                             _directionalCodewordsQueue.Dequeue();
                         }
                     }
-                    _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
+                    if (!_motiveStart)
+                    {
+
+                        _points.Add(new PointR(e.X, e.Y, Environment.TickCount));
+
+                    }
 
                     //info = info + "a";
                     if (_hmmc != null && _directionalCodewordsQueue.Count > 1 && !_recording) // not recording, so testing
@@ -679,12 +740,11 @@ namespace Recognizer.HMM
                             }
                             else
                             {
-
                                 _info = _info + "\n\n" + gestureName;
                                 _directionalCodewordsQueue.Clear();
                                 break;
                             }
-                            for (int loop = 0; loop < 10; loop++)
+                            for (int loop = 0; loop < 5; loop++)
                             {
                                 directionalCodewordsQueueTemp.Dequeue();
                             }
@@ -694,6 +754,7 @@ namespace Recognizer.HMM
 
                 }
 
+
             }
             //Invalidate(new Rectangle(e.X - 2, e.Y - 2, 4, 4));
 
@@ -701,6 +762,7 @@ namespace Recognizer.HMM
 
         private void MainForm_MouseUp(object sender, System.Windows.Forms.MouseEventArgs e)
         {
+
             if (e.Button == MouseButtons.Left)
             {
 
@@ -719,8 +781,12 @@ namespace Recognizer.HMM
                             //{
                             //    pointsTemp.Add(new PointR(r.X, r.Y));
                             //}
-                            _pointsList.Add(new ArrayList(_points));
+                            if (_motiveStart)
+                            {
 
+
+                                _pointsList.Add(new ArrayList(_points));
+                            }
                             _info = "Sample count:" + _pointsList.Count;
 
                             Invalidate();
@@ -728,6 +794,7 @@ namespace Recognizer.HMM
                     }
 
                 }
+
             }
         }
 
@@ -737,6 +804,142 @@ namespace Recognizer.HMM
             if (angle < 0)
                 angle += 2 * 3.1425926;
             return (int)(angle * (8 / 3.1425926)); // convert to <0, 16)
+        }
+        #endregion
+
+        #region Optitrack
+        private bool ConnectMotive()
+        {
+            if (_NatNet != null)
+            {
+                _NatNet.Uninitialize();
+            }
+            //timer = new HiResTimer();
+            _NatNet = new NatNetML.NatNetClientML(0);
+
+            // [NatNet] set a "Frame Ready" callback function (event handler) handler that will be
+            // called by NatNet when NatNet receives a frame of data from the server application
+            _NatNet.OnFrameReady += new NatNetML.FrameReadyEventHandler(m_NatNet_OnFrameReady);
+
+            // [NatNet] connect to a NatNet server
+            string strLocalIP = "127.0.0.1";
+            string strServerIP = "127.0.0.1";
+
+            int code = _NatNet.Initialize(strLocalIP, strServerIP);
+            if (code == 0)
+            {
+                return true;
+            }
+            return false;
+
+
+        }
+
+        private void ConnectMotive(string strLocalIP, string strServerIP)
+        {
+            if (_NatNet != null)
+            {
+                _NatNet.Uninitialize();
+            }
+            //timer = new HiResTimer();
+            _NatNet = new NatNetML.NatNetClientML(0);
+
+            // [NatNet] set a "Frame Ready" callback function (event handler) handler that will be
+            // called by NatNet when NatNet receives a frame of data from the server application
+            _NatNet.OnFrameReady += new NatNetML.FrameReadyEventHandler(m_NatNet_OnFrameReady);
+
+            //// [NatNet] connect to a NatNet server
+            //string strLocalIP = "127.0.0.1";
+            //string strServerIP = "127.0.0.1";
+
+            int code = _NatNet.Initialize(strLocalIP, strServerIP);
+        }
+
+        // [NatNet] m_NatNet_OnFrameReady will be called when a frame of Mocap
+        // data has is received from the server application.
+        //
+        // Note: This callback is on the network service thread, so it is
+        // important  to return from this function quickly as possible 
+        // to prevent incoming frames of data from buffering up on the
+        // network socket.
+        //
+        // Note: "data" is a reference structure to the current frame of data.
+        // NatNet re-uses this same instance for each incoming frame, so it should
+        // not be kept (the values contained in "data" will become replaced after
+        // this callback function has exited).
+
+        private void m_NatNet_OnFrameReady(NatNetML.FrameOfMocapData data, NatNetML.NatNetClientML client)
+        {
+            //Int64 currTime = timer.Value;
+            //if (lastTime != 0)
+            //{
+            //    // Get time elapsed in tenths of a millisecond.
+            //    Int64 timeElapsedInTicks = currTime - lastTime;
+            //    Int64 timeElapseInTenthsOfMilliseconds = (timeElapsedInTicks * 10000) / timer.Frequency;
+
+            //}
+
+            //m_FrameQueue.Clear();
+            //m_FrameQueue.Enqueue(data);
+            lock (_points)
+            {
+
+
+                int n = data.nOtherMarkers;
+                //if (_isDown)
+                //{
+                while (n > 0)
+                {
+                    float x = 0;
+                    float y = 0;
+
+                    x = -data.OtherMarkers[n - 1].x;
+                    y = -data.OtherMarkers[n - 1].y;
+                    if (0 == frameCnt)
+                    {
+                        scale = Math.Abs((int)(300 / y));
+                        x = x * scale;
+                        y = y * scale;
+                        xOffSet = 1200 / 2 - x;
+                        yOffSet = 720 / 2 - y;
+                    }
+                    else
+                    {
+                        //lblResult.Text = "x:" + x+"y:"+y;
+                        x = x * scale + xOffSet;
+                        y = y * scale + yOffSet;
+                        //lock (_points)
+                        //{
+
+                        //    //pointNow = new TimePointF(x, y, TimeEx.NowMs);
+                        //    //if (Math.Sqrt(Math.Pow((pointNow.X - x), 2) + Math.Pow((pointNow.Y - y), 2)) > 5)
+                        //    //{
+                        //    _points.Add(new TimePointF(x, y, TimeEx.NowMs));
+                        //    //}
+                        _points.Add(new PointR(x, y));
+                        Invalidate();
+                        //    Invalidate(new Rectangle((int)x - 2, (int)y - 2, 4, 4));
+                        //}
+                    }
+                    frameCnt++;
+                    n--;
+                }
+            }
+
+            //    }
+            //  }
+            // lastTime = currTime;
+
+        }
+
+        private void Disconnect()
+        {
+            // [NatNet] disconnect
+
+            if (_NatNet != null)
+            {
+                _NatNet.Uninitialize();
+            }
         }
         #endregion
 

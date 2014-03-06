@@ -345,7 +345,7 @@ namespace Recognizer.HMM
                 sequence = sequence + "-" + i ;
             }
 
-            sequence.Substring(1);
+            sequence = sequence.Substring(1);
             return sequence;
         }
 

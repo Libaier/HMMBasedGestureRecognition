@@ -5,5 +5,7 @@ An implementation of the HMM-based threshold model approach for gesture recognit
 
 The HMM part of the project is implement by Accord .NET Framework(http://accord-framework.net/)
 
+The project is based on 64-bit OS.
+
 If you have any problems about this project.
 Please contact me at libaier.gc@gmail.com

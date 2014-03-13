@@ -497,10 +497,10 @@ namespace Recognizer.HMM
             {
                 double[,] transitionMatrix;
                 double[] initialState;
-                forwards[i].Create(true,out transitionMatrix,out initialState);
-                transitionMatrix[0, 0] = 0;
-                transitionMatrix[(int)Math.Sqrt(transitionMatrix.Length)-1, (int)Math.Sqrt(transitionMatrix.Length)-1] = 0;
-                customs[i] = new Custom(transitionMatrix,initialState);
+                forwards[i].Create(true, out transitionMatrix, out initialState);
+                transitionMatrix[0, 0] = Math.Log10(0);
+                transitionMatrix[(int)Math.Sqrt(transitionMatrix.Length) - 1, (int)Math.Sqrt(transitionMatrix.Length) - 1] = Math.Log10(0);
+                customs[i] = new Custom(transitionMatrix, initialState);
             }
 
 

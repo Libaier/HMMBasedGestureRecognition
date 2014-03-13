@@ -468,64 +468,79 @@ namespace Recognizer.HMM
             dlg.RestoreDirectory = false;
             dlg.Multiselect = true;
 
+            ITopology[] forwards = null;
             if (dlg.ShowDialog(this) == DialogResult.OK)
             {
                 lblResult.Text = "Training...";
+                forwards = new Forward[dlg.FileNames.Length];
                 for (int i = 0; i < dlg.FileNames.Length; i++)
                 {
 
                     string name = dlg.FileNames[i];
                     List<int[]> inputSequencesTemp = _rec.LoadDirectionalCodewordsFile(name);
-
+                    int sum = 0;
+                    int avg = 1;
                     for (int j = 0; j < inputSequencesTemp.Count; j++)
                     {
                         inputSequences.Add(inputSequencesTemp[j]);
+                        sum = sum + inputSequencesTemp[j].Length;
                         outputLabels.Add(i);
                     }
+                    avg = sum / inputSequencesTemp.Count/10;
+                    //if (avg > 3)
+                    //{
+                    //    forwards[i] = new Forward(avg, 3);
+                    //}
+                    //else
+                    //{
+                        forwards[i] = new Forward(avg, 2);
+                    //}
                 }
                 ReloadViewForm();
-            }
+                _hmmc = new HiddenMarkovClassifier(dlg.FileNames.Length, forwards, 16);
+                //_hmmc = new HiddenMarkovClassifier(4, customs, 16);
+                //hmmc.Models[0] = new HiddenMarkovModel();
+                //hmmc.Models[0].Transitions = null;kovModel();
+                // And create a algorithms to teach each of the inner models
+                var teacher = new HiddenMarkovClassifierLearning(_hmmc,
 
-            //ITopology forward = new Forward(4,3);
-            ITopology[] forwards = new Forward[4];
-            forwards[0] = new Forward(5, 3);
-            forwards[1] = new Forward(5, 3);
-            forwards[2] = new Forward(5, 3);
-            forwards[3] = new Forward(5, 3);
-            ITopology[] customs = new Custom[4];
-            for (int i = 0; i < 4; i++)
-            {
-                double[,] transitionMatrix;
-                double[] initialState;
-                forwards[i].Create(true, out transitionMatrix, out initialState);
-                transitionMatrix[0, 0] = Math.Log10(0);
-                transitionMatrix[(int)Math.Sqrt(transitionMatrix.Length) - 1, (int)Math.Sqrt(transitionMatrix.Length) - 1] = Math.Log10(0);
-                customs[i] = new Custom(transitionMatrix, initialState);
-            }
+                    // We can specify individual training options for each inner model:
+                    modelIndex => new BaumWelchLearning(_hmmc.Models[modelIndex])
+                    {
+                        Tolerance = 0.001, // iterate until log-likelihood changes less than 0.001
+                        Iterations = 0     // don't place an upper limit on the number of iterations
+                    });
+                teacher.Run((int[][])inputSequences.ToArray(), (int[])outputLabels.ToArray());
 
-
-            _hmmc = new HiddenMarkovClassifier(4, customs, 16);
-            //hmmc.Models[0] = new HiddenMarkovModel();
-            //hmmc.Models[0].Transitions = null;kovModel();
-            // And create a algorithms to teach each of the inner models
-            var teacher = new HiddenMarkovClassifierLearning(_hmmc,
-
-                // We can specify individual training options for each inner model:
-                modelIndex => new BaumWelchLearning(_hmmc.Models[modelIndex])
+                _hmmc.Threshold = teacher.Threshold();
+                //_hmmc.Sensitivity = 1;
+                _hmms = _hmmc.Models;
+                for (int i = 0; i < dlg.FileNames.Length; i++)
                 {
-                    Tolerance = 0.001, // iterate until log-likelihood changes less than 0.001
-                    Iterations = 0     // don't place an upper limit on the number of iterations
-                });
-            teacher.Run((int[][])inputSequences.ToArray(), (int[])outputLabels.ToArray());
-
-            _hmmc.Threshold = teacher.Threshold();
-            _hmmc.Sensitivity = 1;
-            _hmms = _hmmc.Models;
-            for (int i = 0; i < dlg.FileNames.Length; i++)
-            {
-                _hmms[i].Tag = Gesture.ParseName(dlg.FileNames[i]);
+                    _hmms[i].Tag = Gesture.ParseName(dlg.FileNames[i]);
+                }
+                lblResult.Text = "Success!!";
             }
-            lblResult.Text = "Success!!";
+
+            ////ITopology forward = new Forward(4,3);
+            //ITopology[] forwards = new Forward[4];
+            //forwards[0] = new Forward(5, 3);
+            //forwards[1] = new Forward(5, 3);
+            //forwards[2] = new Forward(5, 3);
+            //forwards[3] = new Forward(5, 3);
+            //ITopology[] customs = new Custom[4];
+            //for (int i = 0; i < 4; i++)
+            //{
+            //    double[,] transitionMatrix;
+            //    double[] initialState;
+            //    forwards[i].Create(false, out transitionMatrix, out initialState);
+            //    transitionMatrix[0, 0] = 0;
+            //    transitionMatrix[(int)Math.Sqrt(transitionMatrix.Length) - 1, (int)Math.Sqrt(transitionMatrix.Length) - 1] = 0;
+            //    customs[i] = new Custom(transitionMatrix, initialState);
+            //}
+
+
+
         }
 
         private void SaveHMMFile_Click(object sender, EventArgs e)
@@ -704,10 +719,10 @@ namespace Recognizer.HMM
                         PointR p = (PointR)_points[_points.Count - 1];
                         //_directionalCodewords = "" + getDirectionalCodewords(e.X, e.Y, p.X, p.Y);
                         _directionalCodewordsQueue.Enqueue(getDirectionalCodewords(e.X, e.Y, p.X, p.Y));
-                        if (_directionalCodewordsQueue.Count > _maxCount)
-                        {
-                            _directionalCodewordsQueue.Dequeue();
-                        }
+                        //if (_directionalCodewordsQueue.Count > _maxCount)
+                        //{
+                        //    _directionalCodewordsQueue.Dequeue();
+                        //}
                     }
                     if (!_motiveStart)
                     {
@@ -749,12 +764,12 @@ namespace Recognizer.HMM
                             //{
                             //    pointsTemp.Add(new PointR(r.X, r.Y));
                             //}
-                            if (_motiveStart)
+                            if (!_motiveStart)
                             {
                                 _pointsList.Add(new ArrayList(_points));
                             }
-                            _info = "Sample count:" + _pointsList.Count;
-
+                            //_info = "Sample count:" + _pointsList.Count;
+                            _info = "Sample count:" + _directionalCodewordsList.Count;
                             Invalidate();
                         }
                     }
@@ -925,8 +940,8 @@ namespace Recognizer.HMM
             if (_hmmc != null && _directionalCodewordsQueue.Count > 1 && !_recording) // not recording, so testing
             {
                 Queue<int> directionalCodewordsQueueTemp = _directionalCodewordsQueue;
-                while (directionalCodewordsQueueTemp.Count > 40)
-                {
+                //while (directionalCodewordsQueueTemp.Count > 30)
+                //{
                     //lblResult.Text = "Recognizing...";
                     _info = null;
                     _info = _info + _rec.encode(_directionalCodewordsQueue.ToArray()) + "\n";
@@ -977,14 +992,14 @@ namespace Recognizer.HMM
                     {
                         _info = _info + "\n\n" + gestureName;
                         _directionalCodewordsQueue.Clear();
-                        break;
+                       //break;
                     }
-                    for (int loop = 0; loop < 5; loop++)
-                    {
-                        directionalCodewordsQueueTemp.Dequeue();
-                    }
+                    //for (int loop = 0; loop < 1; loop++)
+                    //{
+                    //    directionalCodewordsQueueTemp.Dequeue();
+                    //}
                     Invalidate();
-                }
+                //}
             }
         }
         #endregion

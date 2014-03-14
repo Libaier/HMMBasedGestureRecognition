@@ -211,6 +211,20 @@ namespace Accord.Statistics.Models.Markov.Topology
                     for (int j = i; j < states && (j - i) < m; j++)
                         A[i, j] = d;
                 }
+
+                //for (int i = 0; i < states; i++)
+                //{
+                //    //double d = 1.0 / Math.Min(m, states - i);
+                //    for (int j = i; j < states && (j - i) < m; j++)
+                //        if (i == j)
+                //        {
+                //            A[i, j] = 0.7;
+                //        }
+                //        else
+                //        {
+                //            A[i, j] = 0.3;
+                //        }
+                //}
             }
 
             if (logarithm)

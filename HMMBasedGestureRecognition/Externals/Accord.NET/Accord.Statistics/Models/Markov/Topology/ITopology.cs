@@ -73,6 +73,5 @@ namespace Accord.Statistics.Models.Markov.Topology
         ///   initial state probabilities for this topology.
         /// </summary>
         int Create(bool logarithm, out double[,] transitionMatrix, out double[] initialState);
-
     }
 }

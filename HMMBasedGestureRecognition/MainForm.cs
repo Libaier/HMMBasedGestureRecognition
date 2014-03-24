@@ -75,6 +75,7 @@ namespace Recognizer.HMM
         private MenuItem Optitrack;
         private MenuItem ConnectToMotive;
         private MenuItem DisconnectMotive;
+        private MenuItem LoadAndTrainOptimized;
         private IContainer components;
 
         #endregion
@@ -148,6 +149,7 @@ namespace Recognizer.HMM
             this.ClearGestures = new System.Windows.Forms.MenuItem();
             this.HMMMenu = new System.Windows.Forms.MenuItem();
             this.LoadAndTrain = new System.Windows.Forms.MenuItem();
+            this.LoadAndTrainOptimized = new System.Windows.Forms.MenuItem();
             this.LoadFromHMMFile = new System.Windows.Forms.MenuItem();
             this.SaveHMMFile = new System.Windows.Forms.MenuItem();
             this.Optitrack = new System.Windows.Forms.MenuItem();
@@ -237,6 +239,7 @@ namespace Recognizer.HMM
             this.HMMMenu.Index = 2;
             this.HMMMenu.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
             this.LoadAndTrain,
+            this.LoadAndTrainOptimized,
             this.LoadFromHMMFile,
             this.SaveHMMFile});
             this.HMMMenu.Text = "&HMM";
@@ -247,15 +250,21 @@ namespace Recognizer.HMM
             this.LoadAndTrain.Text = "&Load .xml And Train...";
             this.LoadAndTrain.Click += new System.EventHandler(this.LoadAndTrain_Click);
             // 
+            // LoadAndTrainOptimized
+            // 
+            this.LoadAndTrainOptimized.Index = 1;
+            this.LoadAndTrainOptimized.Text = "Load .xml And Train(optimized)...";
+            this.LoadAndTrainOptimized.Click += new System.EventHandler(this.LoadAndTrainOptimized_Click);
+            // 
             // LoadFromHMMFile
             // 
-            this.LoadFromHMMFile.Index = 1;
+            this.LoadFromHMMFile.Index = 2;
             this.LoadFromHMMFile.Text = "Load From .&hmm File...";
             this.LoadFromHMMFile.Click += new System.EventHandler(this.LoadFromHMMFile_Click);
             // 
             // SaveHMMFile
             // 
-            this.SaveHMMFile.Index = 2;
+            this.SaveHMMFile.Index = 3;
             this.SaveHMMFile.Text = "&Save to .hmm File";
             this.SaveHMMFile.Click += new System.EventHandler(this.SaveHMMFile_Click);
             // 
@@ -306,7 +315,8 @@ namespace Recognizer.HMM
             // 
             // MainForm
             // 
-            this.AutoScaleBaseSize = new System.Drawing.Size(6, 14);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Inherit;
+            this.AutoScroll = true;
             this.BackColor = System.Drawing.SystemColors.Window;
             this.ClientSize = new System.Drawing.Size(1184, 640);
             this.Controls.Add(this.lblResult);
@@ -541,6 +551,95 @@ namespace Recognizer.HMM
 
 
 
+        }
+
+        private void LoadAndTrainOptimized_Click(object sender, EventArgs e)
+        {
+
+            List<int> outputLabels = new List<int>();
+            List<int[]> inputSequences = new List<int[]>();
+
+
+            OpenFileDialog dlg = new OpenFileDialog();
+            dlg.Filter = "Gestures (*.xml)|*.xml";
+            dlg.Title = "Load Gestures";
+            dlg.RestoreDirectory = false;
+            dlg.Multiselect = true;
+
+            ITopology[] forwards = null;
+            ITopology[] customs = null;
+            if (dlg.ShowDialog(this) == DialogResult.OK)
+            {
+                lblResult.Text = "Training...";
+                forwards = new Forward[dlg.FileNames.Length];
+                customs = new Custom[dlg.FileNames.Length];
+                for (int i = 0; i < dlg.FileNames.Length; i++)
+                {
+
+                    string name = dlg.FileNames[i];
+                    List<int[]> inputSequencesTemp = _rec.LoadDirectionalCodewordsFile(name);
+
+                    for (int j = 0; j < inputSequencesTemp.Count; j++)
+                    {
+                        inputSequences.Add(inputSequencesTemp[j]);
+
+                        outputLabels.Add(i);
+
+                    }
+                    forwards[i] = new Forward(5);
+
+                    double[,] transitionMatrix;
+                    double[] initialState;
+                    forwards[i].Create(false, out transitionMatrix, out initialState);
+                    //transitionMatrix[0, 0] = 0;
+                    //transitionMatrix[(int)Math.Sqrt(transitionMatrix.Length) - 1, (int)Math.Sqrt(transitionMatrix.Length) - 1] = 0;
+                    customs[i] = new Custom(transitionMatrix, initialState);
+                }
+                ReloadViewForm();
+
+                _hmmc = new HiddenMarkovClassifier(dlg.FileNames.Length, customs, 16);
+                // And create a algorithms to teach each of the inner models
+                var teacher = new HiddenMarkovClassifierLearning(_hmmc,
+
+                    // We can specify individual training options for each inner model:
+                    modelIndex => new BaumWelchLearning(_hmmc.Models[modelIndex])
+                    {
+                        Tolerance = 0.001, // iterate until log-likelihood changes less than 0.001
+                        Iterations = 0     // don't place an upper limit on the number of iterations
+                    });
+                teacher.Run((int[][])inputSequences.ToArray(), (int[])outputLabels.ToArray());
+
+                _hmmc.Threshold = teacher.Threshold();
+                _hmmc.Sensitivity = 1;
+                _hmms = _hmmc.Models;
+                for (int i = 0; i < dlg.FileNames.Length; i++)
+                {
+                    _hmms[i].Tag = Gesture.ParseName(dlg.FileNames[i]);
+                }
+                lblResult.Text = "Success!!";
+
+                for (int j = 0; j < inputSequences.Count; j++)
+                {
+                    foreach (HiddenMarkovModel hmm in _hmms)
+                    {
+                        //double prob = hmm.Evaluate(observations);
+                        double prob = 0;
+                        int[] viterbipath = hmm.Decode(inputSequences[j], out prob);
+
+                        //info = info + hmm.Tag + "\t" + hmm.Evaluate(observations) + "\t";
+                        _info = _info + j + ":\t" + hmm.Tag + "\t" + prob + "\tEva:" + hmm.Evaluate(inputSequences[j]) + "\t";
+                        // = hmm.Decode(observations);
+                        foreach (int state in viterbipath)
+                        {
+                            _info = _info + state + " ";
+                        }
+                        _info = _info + "\n";
+
+                    }
+                    Invalidate();
+                }
+
+            }
         }
 
         private void SaveHMMFile_Click(object sender, EventArgs e)
@@ -786,6 +885,7 @@ namespace Recognizer.HMM
                 angle += 2 * 3.1425926;
             return (int)(angle * (8 / 3.1425926)); // convert to <0, 16)
         }
+
         #endregion
 
         #region Optitrack
@@ -964,7 +1064,7 @@ namespace Recognizer.HMM
                         probTemp = prob;
                     }
                     //info = info + hmm.Tag + "\t" + hmm.Evaluate(observations) + "\t";
-                    _info = _info + hmm.Tag + "\t" + prob + "\tEva:" + hmm.Evaluate(observations)+"\t";
+                    _info = _info + hmm.Tag + "\t" + prob + "\tEva:" + hmm.Evaluate(observations) + "\t";
                     // = hmm.Decode(observations);
                     foreach (int state in viterbipath)
                     {
@@ -975,7 +1075,8 @@ namespace Recognizer.HMM
                 }
                 double probTM = 0;
                 int[] viterbipathTM = _hmmc.Threshold.Decode(observations, out probTM);
-                _info = _info + "ThresholdModel\t" + probTM + "\t";
+                //_hmmc.Threshold.Evaluate(observations);
+                _info = _info + "ThresholdModel\t" + probTM + "\tEva:" + _hmmc.Threshold.Evaluate(observations) + "\t";
                 //hmmc.Threshold.Decode(observations);
                 foreach (int state in viterbipathTM)
                 {
@@ -1003,5 +1104,7 @@ namespace Recognizer.HMM
             }
         }
         #endregion
+
+
     }
 }

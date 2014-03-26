@@ -56,7 +56,7 @@ namespace Recognizer.HMM
 
         #region Form Elements
 
-        private System.Windows.Forms.Label lblRecord;
+        private System.Windows.Forms.Label lblResult;
         private System.Windows.Forms.MainMenu MainMenu;
         private System.Windows.Forms.MenuItem Exit;
         private System.Windows.Forms.MenuItem LoadGesture;
@@ -70,12 +70,12 @@ namespace Recognizer.HMM
         private MenuItem HMMMenu;
         private MenuItem LoadAndTrain;
         private MenuItem LoadFromHMMFile;
-        private Label lblResult;
         private MenuItem SaveHMMFile;
         private MenuItem Optitrack;
         private MenuItem ConnectToMotive;
         private MenuItem DisconnectMotive;
         private MenuItem LoadAndTrainOptimized;
+        private Label Console;
         private IContainer components;
 
         #endregion
@@ -101,6 +101,7 @@ namespace Recognizer.HMM
             _font = new Font(FontFamily.GenericSansSerif, 8.25f);
             _viewFrm = null;
             lblResult.Text = String.Empty;
+            
             this.KeyPreview = true;
             //ComputingThread = new Thread(new ThreadStart(this.HMMDecode));
             //ComputingThread.Start();
@@ -138,7 +139,7 @@ namespace Recognizer.HMM
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this.lblRecord = new System.Windows.Forms.Label();
+            this.lblResult = new System.Windows.Forms.Label();
             this.MainMenu = new System.Windows.Forms.MainMenu(this.components);
             this.FileMenu = new System.Windows.Forms.MenuItem();
             this.Exit = new System.Windows.Forms.MenuItem();
@@ -157,22 +158,22 @@ namespace Recognizer.HMM
             this.DisconnectMotive = new System.Windows.Forms.MenuItem();
             this.HelpMenu = new System.Windows.Forms.MenuItem();
             this.About = new System.Windows.Forms.MenuItem();
-            this.lblResult = new System.Windows.Forms.Label();
+            this.Console = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
-            // lblRecord
+            // lblResult
             // 
-            this.lblRecord.BackColor = System.Drawing.Color.Transparent;
-            this.lblRecord.Dock = System.Windows.Forms.DockStyle.Top;
-            this.lblRecord.Font = new System.Drawing.Font("Courier New", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblRecord.ForeColor = System.Drawing.Color.Firebrick;
-            this.lblRecord.Location = new System.Drawing.Point(0, 0);
-            this.lblRecord.Name = "lblRecord";
-            this.lblRecord.Size = new System.Drawing.Size(1184, 26);
-            this.lblRecord.TabIndex = 1;
-            this.lblRecord.Text = "[Recording]";
-            this.lblRecord.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.lblRecord.Visible = false;
+            this.lblResult.BackColor = System.Drawing.Color.Transparent;
+            this.lblResult.Dock = System.Windows.Forms.DockStyle.Top;
+            this.lblResult.Font = new System.Drawing.Font("Courier New", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblResult.ForeColor = System.Drawing.Color.Firebrick;
+            this.lblResult.Location = new System.Drawing.Point(0, 0);
+            this.lblResult.Name = "lblResult";
+            this.lblResult.Size = new System.Drawing.Size(1184, 26);
+            this.lblResult.TabIndex = 1;
+            this.lblResult.Text = "[Recording]";
+            this.lblResult.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.lblResult.Visible = false;
             // 
             // MainMenu
             // 
@@ -301,17 +302,15 @@ namespace Recognizer.HMM
             this.About.Text = "&About...";
             this.About.Click += new System.EventHandler(this.About_Click);
             // 
-            // lblResult
+            // Console
             // 
-            this.lblResult.BackColor = System.Drawing.Color.Transparent;
-            this.lblResult.Dock = System.Windows.Forms.DockStyle.Top;
-            this.lblResult.Font = new System.Drawing.Font("Courier New", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.lblResult.ForeColor = System.Drawing.Color.Firebrick;
-            this.lblResult.Location = new System.Drawing.Point(0, 26);
-            this.lblResult.Name = "lblResult";
-            this.lblResult.Size = new System.Drawing.Size(1184, 26);
-            this.lblResult.TabIndex = 2;
-            this.lblResult.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.Console.AutoSize = true;
+            this.Console.Font = new System.Drawing.Font("Microsoft YaHei", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.Console.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.Console.Location = new System.Drawing.Point(4, 30);
+            this.Console.Name = "Console";
+            this.Console.Size = new System.Drawing.Size(0, 19);
+            this.Console.TabIndex = 2;
             // 
             // MainForm
             // 
@@ -319,8 +318,8 @@ namespace Recognizer.HMM
             this.AutoScroll = true;
             this.BackColor = System.Drawing.SystemColors.Window;
             this.ClientSize = new System.Drawing.Size(1184, 640);
+            this.Controls.Add(this.Console);
             this.Controls.Add(this.lblResult);
-            this.Controls.Add(this.lblRecord);
             this.KeyPreview = true;
             this.Menu = this.MainMenu;
             this.Name = "MainForm";
@@ -334,6 +333,7 @@ namespace Recognizer.HMM
             this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseMove);
             this.MouseUp += new System.Windows.Forms.MouseEventHandler(this.MainForm_MouseUp);
             this.ResumeLayout(false);
+            this.PerformLayout();
 
         }
         private void MainForm_Load(object sender, EventArgs e)
@@ -450,7 +450,7 @@ namespace Recognizer.HMM
                 }
 
             }
-            lblRecord.Visible = _recording;
+            lblResult.Visible = _recording;
         }
 
         private void ClearGestures_Click(object sender, System.EventArgs e)
@@ -586,6 +586,11 @@ namespace Recognizer.HMM
                         outputLabels.Add(i);
 
                     }
+                }
+                ReloadViewForm();
+
+                for (int i = 0; i < dlg.FileNames.Length; i++)
+                {
                     forwards[i] = new Forward(5);
 
                     double[,] transitionMatrix;
@@ -595,9 +600,8 @@ namespace Recognizer.HMM
                     //transitionMatrix[(int)Math.Sqrt(transitionMatrix.Length) - 1, (int)Math.Sqrt(transitionMatrix.Length) - 1] = 0;
                     customs[i] = new Custom(transitionMatrix, initialState);
                 }
-                ReloadViewForm();
 
-                _hmmc = new HiddenMarkovClassifier(dlg.FileNames.Length, customs, 16);
+                _hmmc = new HiddenMarkovClassifier(dlg.FileNames.Length, forwards, 16);
                 // And create a algorithms to teach each of the inner models
                 var teacher = new HiddenMarkovClassifierLearning(_hmmc,
 
@@ -617,6 +621,7 @@ namespace Recognizer.HMM
                     _hmms[i].Tag = Gesture.ParseName(dlg.FileNames[i]);
                 }
                 lblResult.Text = "Success!!";
+               
 
                 for (int j = 0; j < inputSequences.Count; j++)
                 {
@@ -627,7 +632,7 @@ namespace Recognizer.HMM
                         int[] viterbipath = hmm.Decode(inputSequences[j], out prob);
 
                         //info = info + hmm.Tag + "\t" + hmm.Evaluate(observations) + "\t";
-                        _info = _info + j + ":\t" + hmm.Tag + "\t" + prob + "\tEva:" + hmm.Evaluate(inputSequences[j]) + "\t";
+                        _info = _info + "No." + j + "\tTag: " + hmm.Tag + "\tEva: " + hmm.Evaluate(inputSequences[j]) + "\tDec: " + prob+"\tPath: ";
                         // = hmm.Decode(observations);
                         foreach (int state in viterbipath)
                         {
@@ -636,8 +641,11 @@ namespace Recognizer.HMM
                         _info = _info + "\n";
 
                     }
-                    Invalidate();
+                    //_info;
+                    
                 }
+                Console.Text = _info.Replace("\t", "   ");
+                Invalidate();
 
             }
         }
@@ -728,8 +736,8 @@ namespace Recognizer.HMM
                     PointF p0 = (PointF)(PointR)_points[0]; // draw the first point bigger
                     e.Graphics.FillEllipse(_recording ? Brushes.Firebrick : Brushes.DarkBlue, p0.X - 5f, p0.Y - 5f, 10f, 10f);
                 }
-                e.Graphics.DrawString(_info, _font, Brushes.Black, new PointF(20, 40));
-
+                //e.Graphics.DrawString(_info, _font, Brushes.Black, new PointF(20, 40));
+                
                 foreach (PointR r in _points)
                 {
                     PointF p = (PointF)r; // cast

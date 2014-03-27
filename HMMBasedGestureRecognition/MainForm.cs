@@ -173,7 +173,6 @@ namespace Recognizer.HMM
             this.lblResult.TabIndex = 1;
             this.lblResult.Text = "[Recording]";
             this.lblResult.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.lblResult.Visible = false;
             // 
             // MainMenu
             // 
@@ -336,10 +335,12 @@ namespace Recognizer.HMM
             this.PerformLayout();
 
         }
+
         private void MainForm_Load(object sender, EventArgs e)
         {
 
         }
+
         #endregion
 
         #region File Menu
@@ -496,14 +497,14 @@ namespace Recognizer.HMM
                         sum = sum + inputSequencesTemp[j].Length;
                         outputLabels.Add(i);
                     }
-                    avg = sum / inputSequencesTemp.Count / 10;
+                    //avg = sum / inputSequencesTemp.Count / 10;
                     //if (avg > 3)
                     //{
                     //    forwards[i] = new Forward(avg, 3);
                     //}
                     //else
                     //{
-                    forwards[i] = new Forward(avg);
+                    forwards[i] = new Forward(10,3);
                     //}
                 }
                 ReloadViewForm();
@@ -589,64 +590,78 @@ namespace Recognizer.HMM
                 }
                 ReloadViewForm();
 
-                for (int i = 0; i < dlg.FileNames.Length; i++)
+                for (int StateNum = 3; StateNum < 10; StateNum++)
                 {
-                    forwards[i] = new Forward(5);
+                    _info = _info + "StateNum: " + StateNum + "\n\n";
+                    double decAvg = 0;
+                    double evaAvg = 0;
 
-                    double[,] transitionMatrix;
-                    double[] initialState;
-                    forwards[i].Create(false, out transitionMatrix, out initialState);
-                    //transitionMatrix[0, 0] = 0;
-                    //transitionMatrix[(int)Math.Sqrt(transitionMatrix.Length) - 1, (int)Math.Sqrt(transitionMatrix.Length) - 1] = 0;
-                    customs[i] = new Custom(transitionMatrix, initialState);
-                }
-
-                _hmmc = new HiddenMarkovClassifier(dlg.FileNames.Length, forwards, 16);
-                // And create a algorithms to teach each of the inner models
-                var teacher = new HiddenMarkovClassifierLearning(_hmmc,
-
-                    // We can specify individual training options for each inner model:
-                    modelIndex => new BaumWelchLearning(_hmmc.Models[modelIndex])
+                    for (int i = 0; i < dlg.FileNames.Length; i++)
                     {
-                        Tolerance = 0.001, // iterate until log-likelihood changes less than 0.001
-                        Iterations = 0     // don't place an upper limit on the number of iterations
-                    });
-                teacher.Run((int[][])inputSequences.ToArray(), (int[])outputLabels.ToArray());
+                        forwards[i] = new Forward(StateNum);
 
-                _hmmc.Threshold = teacher.Threshold();
-                _hmmc.Sensitivity = 1;
-                _hmms = _hmmc.Models;
-                for (int i = 0; i < dlg.FileNames.Length; i++)
-                {
-                    _hmms[i].Tag = Gesture.ParseName(dlg.FileNames[i]);
-                }
-                lblResult.Text = "Success!!";
-               
+                        double[,] transitionMatrix;
+                        double[] initialState;
+                        forwards[i].Create(false, out transitionMatrix, out initialState);
+                        //transitionMatrix[0, 0] = 0;
+                        //transitionMatrix[(int)Math.Sqrt(transitionMatrix.Length) - 1, (int)Math.Sqrt(transitionMatrix.Length) - 1] = 0;
+                        customs[i] = new Custom(transitionMatrix, initialState);
+                    }
 
-                for (int j = 0; j < inputSequences.Count; j++)
-                {
-                    foreach (HiddenMarkovModel hmm in _hmms)
-                    {
-                        //double prob = hmm.Evaluate(observations);
-                        double prob = 0;
-                        int[] viterbipath = hmm.Decode(inputSequences[j], out prob);
+                    _hmmc = new HiddenMarkovClassifier(dlg.FileNames.Length, forwards, 16);
+                    // And create a algorithms to teach each of the inner models
+                    var teacher = new HiddenMarkovClassifierLearning(_hmmc,
 
-                        //info = info + hmm.Tag + "\t" + hmm.Evaluate(observations) + "\t";
-                        _info = _info + "No." + j + "\tTag: " + hmm.Tag + "\tEva: " + hmm.Evaluate(inputSequences[j]) + "\tDec: " + prob+"\tPath: ";
-                        // = hmm.Decode(observations);
-                        foreach (int state in viterbipath)
+                        // We can specify individual training options for each inner model:
+                        modelIndex => new BaumWelchLearning(_hmmc.Models[modelIndex])
                         {
-                            _info = _info + state + " ";
+                            Tolerance = 0.001, // iterate until log-likelihood changes less than 0.001
+                            Iterations = 0     // don't place an upper limit on the number of iterations
+                        });
+                    teacher.Run((int[][])inputSequences.ToArray(), (int[])outputLabels.ToArray());
+
+                    _hmmc.Threshold = teacher.Threshold();
+                    _hmmc.Sensitivity = 1;
+                    _hmms = _hmmc.Models;
+                    for (int i = 0; i < dlg.FileNames.Length; i++)
+                    {
+                        _hmms[i].Tag = Gesture.ParseName(dlg.FileNames[i]);
+                    }
+                    lblResult.Text = "Success!!";
+
+
+                    for (int j = 0; j < inputSequences.Count; j++)
+                    {
+                        foreach (HiddenMarkovModel hmm in _hmms)
+                        {
+                            //double prob = hmm.Evaluate(observations);
+                            double probDec = 0;
+                            int[] viterbipath = hmm.Decode(inputSequences[j], out probDec);
+                            decAvg = decAvg + probDec;
+                            double probEva = hmm.Evaluate(inputSequences[j]);
+                            evaAvg = evaAvg + probEva;
+
+                            //info = info + hmm.Tag + "\t" + hmm.Evaluate(observations) + "\t";
+                            _info = _info + "No." + j + "\tTag: " + hmm.Tag + "\tEva: " + probEva + "\tDec: " + probDec + "\tPath: ";
+                            // = hmm.Decode(observations);
+                            foreach (int state in viterbipath)
+                            {
+                                _info = _info + state + " ";
+                            }
+                            _info = _info + "\n";
+
                         }
-                        _info = _info + "\n";
 
                     }
-                    //_info;
+                    decAvg = decAvg / 80;
+                    evaAvg = evaAvg / 80;
+                    _info = _info + "DecAvg:   " + decAvg + " EvaAvg:   " + evaAvg + "\n\n";
+
                     
                 }
+                //_info;
                 Console.Text = _info.Replace("\t", "   ");
                 Invalidate();
-
             }
         }
 
@@ -838,7 +853,7 @@ namespace Recognizer.HMM
 
                     }
 
-                    Recongnize();
+                    //Recongnize();
 
                     Invalidate();
 
@@ -876,8 +891,13 @@ namespace Recognizer.HMM
                                 _pointsList.Add(new ArrayList(_points));
                             }
                             //_info = "Sample count:" + _pointsList.Count;
+
                             _info = "Sample count:" + _directionalCodewordsList.Count;
                             Invalidate();
+                        }
+                        else
+                        {
+                            Recongnize();
                         }
                     }
 
@@ -1107,6 +1127,7 @@ namespace Recognizer.HMM
                 //{
                 //    directionalCodewordsQueueTemp.Dequeue();
                 //}
+                Console.Text = _info;
                 Invalidate();
                 //}
             }
